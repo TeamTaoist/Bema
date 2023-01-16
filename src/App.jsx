@@ -1,7 +1,11 @@
 import { useState } from "react";
 import reactLogo from "./assets/react.svg";
 import { invoke } from "@tauri-apps/api/tauri";
+import Database from "tauri-plugin-sql-api";
+
 import "./App.css";
+
+const db = await Database.load("sqlite:test.db");
 
 function App() {
   const [greetMsg, setGreetMsg] = useState("");
@@ -10,6 +14,29 @@ function App() {
   async function greet() {
     // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
     setGreetMsg(await invoke("greet", { name }));
+  }
+
+  async function createDB() {
+    const SQL = "CREATE TABLE todos (\
+      id INTEGER NOT NULL PRIMARY KEY,\
+      title VARCHAR NOT NULL,\
+      body TEXT NOT NULL DEFAULT '',\
+      done BOOLEAN NOT NULL DEFAULT 'f'\
+    );";
+
+    await db.execute(SQL);
+  }
+
+  async function insert() {
+    const SQL = `INSERT INTO todos VALUES(${Date.now()}, 'my task', 'task desc', 'f');`;
+
+    await db.execute(SQL);
+  }
+
+  async function query() {
+    const SQL = "SELECT id, title, body, done from todos;";
+    let ret = await db.select(SQL);
+    console.log(ret);
   }
 
   return (
@@ -39,6 +66,15 @@ function App() {
           />
           <button type="button" onClick={() => greet()}>
             Greet
+          </button>
+          <button type="button" onClick={() => createDB()}>
+            Create DB
+          </button>
+          <button type="button" onClick={() => insert()}>
+            Insert Record
+          </button>
+          <button type="button" onClick={() => query()}>
+            Query Record
           </button>
         </div>
       </div>
