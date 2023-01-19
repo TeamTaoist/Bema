@@ -2,6 +2,7 @@ import { useState } from "react";
 import reactLogo from "./assets/react.svg";
 import { invoke } from "@tauri-apps/api/tauri";
 import Database from "tauri-plugin-sql-api";
+import { BaseDirectory, createDir, writeFile } from "@tauri-apps/api/fs";
 
 import "./App.css";
 
@@ -15,6 +16,33 @@ function App() {
     // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
     setGreetMsg(await invoke("greet", { name }));
   }
+
+  async function createDataFolder() {
+    try {
+      await createDir("data", {
+        dir: BaseDirectory.Desktop,
+        recursive: true,
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  async function createDataFile() {
+    try {
+      await writeFile(
+        {
+          contents: "[]",
+          path: `data.json`,
+        },
+        {
+          dir: BaseDirectory.Desktop,
+        }
+      );
+    } catch (e) {
+      console.log(e);
+    }
+  };
 
   async function createDB() {
     const SQL = "CREATE TABLE todos (\
@@ -75,6 +103,12 @@ function App() {
           </button>
           <button type="button" onClick={() => query()}>
             Query Record
+          </button>
+          <button type="button" onClick={() => createDataFolder()}>
+            Create DataFolder
+          </button>
+          <button type="button" onClick={() => createDataFile()}>
+            Create DataFile
           </button>
         </div>
       </div>

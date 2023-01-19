@@ -16,11 +16,21 @@
       "shell": {
         "all": false,
         "open": true
+      },
+      "fs": {
+        "all": true,
+        "scope": [
+          "$APP/*",
+          "$DESKTOP/*"
+        ]
+      },
+      "path": {
+        "all": true
       }
     },
     "bundle": {
       "active": true,
-      "category": "DeveloperTool",
+      "category": "VideoSharingTool",
       "copyright": "",
       "deb": {
         "depends": []
@@ -33,7 +43,7 @@
         "icons/icon.icns",
         "icons/icon.ico"
       ],
-      "identifier": "com.tauri.dev",
+      "identifier": "com.bema.app",
       "longDescription": "",
       "macOS": {
         "entitlements": null,
