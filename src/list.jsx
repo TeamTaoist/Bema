@@ -10,7 +10,7 @@ import { useParams } from "react-router-dom";
 import Bg from "./components/bg";
 import DetailImg from "./assets/images/icon_detail.svg";
 
-import DemoImg from "./assets/images/testFiles/ccImg.png";
+import DemoImg from "./assets/images/testFiles/testCover.png";
 
 const Box = styled.div`
     padding: 40px;
