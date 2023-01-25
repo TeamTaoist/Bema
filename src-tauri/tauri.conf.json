@@ -30,7 +30,7 @@
     },
     "bundle": {
       "active": true,
-      "category": "VideoSharingTool",
+      "category": "Video",
       "copyright": "",
       "deb": {
         "depends": []
