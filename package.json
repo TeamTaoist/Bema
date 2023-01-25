@@ -7,10 +7,12 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "rename": "node rename.js"
   },
   "dependencies": {
     "@tauri-apps/api": "^1.2.0",
+    "execa": "^6.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "tauri-plugin-sql-api": "https://github.com/tauri-apps/tauri-plugin-sql"
