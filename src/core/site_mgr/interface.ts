@@ -1,6 +1,8 @@
 // SiteManagerInterface defines signatures for various methods that will be used for managing site
 // For each user, there is one associated site manager object
-interface SiteManagerInterface {
+import {SiteMediaMetadata, SiteMetadata, UploadMediaRequest, UserMetadata} from "./models";
+
+export interface SiteManagerInterface {
     // User related
     getUserMetadata: (userId: string) => Promise<UserMetadata>;
 

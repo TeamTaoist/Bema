@@ -1,14 +1,22 @@
-import { existsSync } from 'node:fs';
-import fs from 'fs';
-import path from 'path';
-import { create as IpfsHttpClient } from 'ipfs-http-client'
-import { IPFSHTTPClient } from 'ipfs-http-client/dist/src/types';
-import { v4 as uuidv4 } from 'uuid';
-import { L } from '@tauri-apps/api/event-2a9960e7';
-import { F } from '@tauri-apps/api/path-e12e0e34';
+import {existsSync} from 'node:fs';
+import * as fs from 'fs';
+import * as path from 'path';
+import {create as IpfsHttpClient} from 'ipfs-http-client'
+import {IPFSHTTPClient} from 'ipfs-http-client/dist/src/types';
+import {v4 as uuidv4} from 'uuid';
+
+import {
+    SiteManagerConfig,
+    SiteMediaMetadata,
+    SiteMetadata,
+    StorageBackend,
+    UploadMediaRequest,
+    UserMetadata
+} from './models';
+import {SiteManagerInterface} from "./interface";
 
 
-const DefaultSiteConfig: SiteManagetConfig = {
+const DefaultSiteConfig: SiteManagerConfig = {
     storageBackend: StorageBackend.IPFS,
     storageNodeURL: "http://127.0.0.1:5001",
     userId: "",
@@ -16,14 +24,14 @@ const DefaultSiteConfig: SiteManagetConfig = {
 };
 
 class SiteManagerIPFS implements SiteManagerInterface {
-    config: SiteManagetConfig;
+    config: SiteManagerConfig;
     ipfsClient: IPFSHTTPClient;
 
     dataDirHash: string;
 
-    constructor(config?: SiteManagetConfig) {
+    constructor(config?: SiteManagerConfig) {
         if (config !== null) {
-            this.config = { ...DefaultSiteConfig, ...config }
+            this.config = {...DefaultSiteConfig, ...config}
         } else {
             this.config = DefaultSiteConfig
         }
@@ -81,7 +89,7 @@ class SiteManagerIPFS implements SiteManagerInterface {
         if (!siteMediaDir.includes(this.config.dataDir)) {
             console.error(`directory to be removed (${siteMediaDir}) seems not under dataDir (${this.config.dataDir}), please double check the code`);
         } else {
-            fs.rmSync(siteMediaDir, { recursive: true, force: true });
+            fs.rmSync(siteMediaDir, {recursive: true, force: true});
         }
         this.updateStorage();
     };

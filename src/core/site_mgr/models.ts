@@ -1,8 +1,8 @@
-enum StorageBackend {
+export enum StorageBackend {
     IPFS = 0,
 }
 
-class SiteManagetConfig {
+export class SiteManagerConfig {
     // onchain storage configuration
     storageBackend: StorageBackend
     storageNodeURL: string
@@ -15,14 +15,14 @@ class SiteManagetConfig {
     dataDir: string
 }
 
-class UserMetadata {
+export class UserMetadata {
     userId: string
 
     createdAt: number
     updatedAt: number
 }
 
-class SiteMetadata {
+export class SiteMetadata {
     siteId: string
     name: string
     description: string
@@ -31,7 +31,7 @@ class SiteMetadata {
     updatedAt: number
 }
 
-class SiteMediaMetadata {
+export class SiteMediaMetadata {
     mediaId: string
     title: string
     description: string
@@ -44,7 +44,7 @@ class SiteMediaMetadata {
 
 
 // Request models
-class UploadMediaRequest {
+export class UploadMediaRequest {
     siteId: string
     title: string
     description: string
