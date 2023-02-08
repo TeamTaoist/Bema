@@ -49,4 +49,7 @@ export class UploadMediaRequest {
     title: string
     description: string
     tags: [string]
+
+    // tmpMediaPath saves temp path for media after uploaded by user
+    tmpMediaPath: string
 }
