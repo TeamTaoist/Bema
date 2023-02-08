@@ -1,8 +1,9 @@
 import {existsSync} from 'node:fs';
+import {writeFile} from 'fs/promises';
+import {createFFmpeg, fetchFile} from '@ffmpeg/ffmpeg';
 import * as fs from 'fs';
 import * as path from 'path';
-import {create as IpfsHttpClient} from 'ipfs-http-client'
-import {IPFSHTTPClient} from 'ipfs-http-client/dist/src/types';
+import {IPFSHTTPClient, create} from 'ipfs-http-client';
 import {v4 as uuidv4} from 'uuid';
 
 import {
@@ -23,7 +24,9 @@ const DefaultSiteConfig: SiteManagerConfig = {
     dataDir: "",
 };
 
-class SiteManagerIPFS implements SiteManagerInterface {
+const ffmpeg = createFFmpeg({log: true});
+
+export class SiteManagerIPFS implements SiteManagerInterface {
     config: SiteManagerConfig;
     ipfsClient: IPFSHTTPClient;
 
@@ -38,17 +41,26 @@ class SiteManagerIPFS implements SiteManagerInterface {
 
         console.log("merged config: ", this.config);
 
-        // Prepare data directory for the user
-
-        // Connect to IPFS node
-        () => {
-            this.initIpfsClient()
+        // Create data dir if not existing
+        if (!fs.existsSync(this.config.dataDir)) {
+            fs.mkdirSync(this.config.dataDir);
         }
     }
 
+    async init() {
+        // Connect to IPFS node
+        await this.initIpfsClient();
+
+        // load ffmpeg
+        await ffmpeg.load();
+
+        console.log("init done")
+    }
+
     async initIpfsClient() {
+        console.warn("IPFS function is not ready yet, all changes will be saved in local dataDir")
         const url = new URL(this.config.storageNodeURL);
-        this.ipfsClient = IpfsHttpClient({
+        this.ipfsClient = await create({
             host: url.host, port: parseInt(url.port), protocol: url.protocol
         });
     }
@@ -56,13 +68,13 @@ class SiteManagerIPFS implements SiteManagerInterface {
     getUserMetadata: (userId: string) => Promise<UserMetadata>;
 
     async createSite(siteName: string, description: string) {
-        var siteMetadata: SiteMetadata = {
+        const siteMetadata: SiteMetadata = {
             siteId: uuidv4(),
             name: siteName,
             description: description,
             createdAt: Date.now(),
             updatedAt: Date.now(),
-        }
+        };
         // Create a sub directory under data dir
         const siteDir = path.resolve(path.join(this.config.dataDir, siteMetadata.siteId));
         if (!existsSync(siteDir)) {
@@ -71,17 +83,16 @@ class SiteManagerIPFS implements SiteManagerInterface {
             console.error("Got same UUID, hmm.....");
         }
 
-        this.saveSiteMetadata(siteMetadata, false);
-        this.updateStorage();
+        await this.saveSiteMetadata(siteMetadata, false);
 
-        // TODO: confirm whether publishcation is required here
+        // TODO: confirm whether publishing is required here
 
         return siteMetadata;
     }
 
     async updateSite(siteMetadata: SiteMetadata) {
-        this.saveSiteMetadata(siteMetadata, true);
-        this.updateStorage();
+        await this.saveSiteMetadata(siteMetadata, true);
+        await this.updateStorage();
     };
 
     async deleteSite(siteId: string) {
@@ -91,13 +102,13 @@ class SiteManagerIPFS implements SiteManagerInterface {
         } else {
             fs.rmSync(siteMediaDir, {recursive: true, force: true});
         }
-        this.updateStorage();
+        await this.updateStorage();
     };
 
     async getSite(siteId: string) {
         const siteMetafilePath = this.getSiteMetaFilePathViaSiteId(siteId);
         let siteMetadata = fs.readFileSync(siteMetafilePath);
-        this.updateStorage();
+        await this.updateStorage();
         return JSON.parse(siteMetadata.toString());
     }
 
@@ -113,10 +124,11 @@ class SiteManagerIPFS implements SiteManagerInterface {
             updatedAt: Date.now(),
         };
 
-        // Create media directory under site directory
-        // Launching ffmpeg split media and save results to media directory
-
-        this.updateStorage();
+        const siteDir = this.getSiteDirViaSiteId(reqData.siteId);
+        const outputDir = path.join(siteDir, mediaMetadata.mediaId);
+        fs.mkdirSync(outputDir);
+        await this.generateHlsContent(reqData.tmpMediaPath, outputDir);
+        await this.updateStorage();
         return mediaMetadata;
     };
 
@@ -125,7 +137,7 @@ class SiteManagerIPFS implements SiteManagerInterface {
     ///////////////////////////
     // utils methods
     ///////////////////////////
-    saveSiteMetadata(siteMetadata: SiteMetadata, override: boolean) {
+    async saveSiteMetadata(siteMetadata: SiteMetadata, override: boolean) {
         const siteMetadataFilePath = this.getSiteMetaFilePath(siteMetadata);
 
         if (!existsSync(siteMetadataFilePath)) {
@@ -140,13 +152,13 @@ class SiteManagerIPFS implements SiteManagerInterface {
             }
         }
 
-        this.updateStorage();
+        await this.updateStorage();
     }
 
     // updateStorage update changes to IPFS storage
     // TODO: Save data dir hash into dataDirHash variable
-    updateStorage() {
-        this.ipfsClient.addAll(this.config.dataDir)
+    async updateStorage() {
+        await this.ipfsClient.addAll(this.config.dataDir)
     }
 
     // publishChanges invoke ipfs.publish to refresh published content
@@ -170,5 +182,35 @@ class SiteManagerIPFS implements SiteManagerInterface {
     getSiteMetaFilePathViaSiteId(siteId: string): string {
         const siteDir = this.getSiteDirViaSiteId(siteId);
         return path.resolve(path.join(siteDir, "metadata.json"));
+    }
+
+    // TODO: Move this function to separated media processing module
+    async generateHlsContent(srcMediaPath: string, outputDir: string) {
+        // Save media file from src media path to ffmpeg.wasm FS.
+        // generate uuid for saving file under processing to avoid overriding
+        const baseDir = uuidv4();
+        const tmpFileName = path.join(baseDir, path.basename(srcMediaPath));
+        const wasmFsOutputPath = path.join(baseDir, "output");
+        ffmpeg.FS("mkdir", baseDir);
+        ffmpeg.FS("mkdir", wasmFsOutputPath);
+        ffmpeg.FS("writeFile", tmpFileName, await fetchFile(srcMediaPath));
+        await ffmpeg.run(
+            "-i",
+            tmpFileName,
+            "-hls_time",
+            '30',
+            '-hls_list_size',
+            '0',
+            path.join(wasmFsOutputPath, 'index.m3u8'),
+        );
+
+        console.log(`Try to getting data form ${wasmFsOutputPath}`);
+        for (const f of ffmpeg.FS('readdir', wasmFsOutputPath)) {
+            if (f === '.' || f === '..') {
+                continue;
+            }
+            console.log(`file info: ${f}`)
+            fs.writeFileSync(path.join(outputDir, f), ffmpeg.FS('readFile', path.join(wasmFsOutputPath, f)));
+        }
     }
 }
