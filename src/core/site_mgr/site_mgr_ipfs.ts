@@ -228,13 +228,19 @@ export class SiteManagerIPFS implements SiteManagerInterface {
         };
 
 
-        for await (const file of this.ipfsClient.addAll(globSource(this.config.dataDir, '**/*', null), addOptions)) {
-            console.log(file)
+        for await (const addResult of this.ipfsClient.addAll(globSource(this.config.dataDir, '**/*', null), addOptions)) {
+            const addedPath = addResult.path;
+            if (addedPath === '') {
+                this.dataDirHash = addResult.cid.toString();
+                console.log(this.dataDirHash);
+            }
         }
     }
 
     // publishChanges invoke ipfs.publish to refresh published content
     async publishChanges() {
-        await this.ipfsClient.name.publish("/ipfs/" + this.dataDirHash);
+        console.log(`prepare to publish site`);
+        let publishResult = await this.ipfsClient.name.publish("/ipfs/" + this.dataDirHash);
+        console.log(`site publish result: ${JSON.stringify(publishResult)}`);
     }
 }

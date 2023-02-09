@@ -5,6 +5,9 @@
 
 import {SiteManagerIPFS} from "./site_mgr_ipfs";
 import {SiteManagerConfig, UploadMediaRequest} from "./models";
+import {readdir} from 'node:fs/promises'
+import {join} from 'node:path'
+
 
 let siteConfig = new SiteManagerConfig()
 siteConfig.dataDir = "./tmpdata";
@@ -14,7 +17,7 @@ let siteMgr: SiteManagerIPFS = new SiteManagerIPFS(siteConfig);
     await siteMgr.init();
     let siteMetadata = await siteMgr.createSite("testSite", "this is a test site");
     console.log(`create site rslt: ${JSON.stringify(siteMetadata)}`);
-
+    
     let newMediaReq: UploadMediaRequest = {
         siteId: siteMetadata.siteId,
         title: "A test media",
@@ -24,4 +27,7 @@ let siteMgr: SiteManagerIPFS = new SiteManagerIPFS(siteConfig);
     }
     let mediaMetadata = await siteMgr.uploadMedia(newMediaReq)
     console.log(`Media uploaded done, metadata: ${JSON.stringify(mediaMetadata)}`)
+
+    await siteMgr.updateStorage();
+    await siteMgr.publishChanges();
 })()
