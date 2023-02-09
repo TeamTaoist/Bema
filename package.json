@@ -8,7 +8,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "rename": "node rename.js"
+    "rename": "node rename.js",
+    "tauriDev": "tauri dev",
+    "tauriBuild": "tauri build"
   },
   "dependencies": {
     "@ffmpeg/core": "^0.11.0",
@@ -18,10 +20,21 @@
     "execa": "^6.1.0",
     "ipfs-core": "^0.18.0",
     "ipfs-http-client": "^60.0.0",
+    "animejs": "^3.2.1",
+    "bootstrap": "^5.2.3",
     "react": "^18.2.0",
+    "react-bootstrap": "^2.7.0",
+    "react-copy-to-clipboard": "^5.1.0",
     "react-dom": "^18.2.0",
     "tauri-plugin-sql-api": "https://github.com/tauri-apps/tauri-plugin-sql",
-    "uuid": "^9.0.0"
+    "uuid": "^9.0.0",
+    "react-h5-audio-player": "^3.8.6",
+    "react-lettered-avatar": "^1.0.2",
+    "react-router-dom": "^6.7.0",
+    "sass": "^1.57.1",
+    "styled-components": "^5.3.6",
+    "tauri-plugin-sql-api": "https://github.com/tauri-apps/tauri-plugin-sql",
+    "video.js": "^7.21.1"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^1.2.2",
