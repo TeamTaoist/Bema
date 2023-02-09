@@ -1,10 +1,10 @@
-import {existsSync} from 'node:fs';
-import {writeFile} from 'fs/promises';
-import {createFFmpeg, fetchFile} from '@ffmpeg/ffmpeg';
-import * as fs from 'fs';
+import { existsSync, mkdirSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
+import { writeFile, readdir } from 'fs/promises';
+import { createFFmpeg, fetchFile } from '@ffmpeg/ffmpeg';
+
 import * as path from 'path';
-import {IPFSHTTPClient, create} from 'ipfs-http-client';
-import {v4 as uuidv4} from 'uuid';
+import { IPFSHTTPClient, create, globSource } from 'ipfs-http-client';
+import { v4 as uuidv4 } from 'uuid';
 
 import {
     SiteManagerConfig,
@@ -14,7 +14,7 @@ import {
     UploadMediaRequest,
     UserMetadata
 } from './models';
-import {SiteManagerInterface} from "./interface";
+import { SiteManagerInterface } from "./interface";
 
 
 const DefaultSiteConfig: SiteManagerConfig = {
@@ -24,7 +24,7 @@ const DefaultSiteConfig: SiteManagerConfig = {
     dataDir: "",
 };
 
-const ffmpeg = createFFmpeg({log: true});
+const ffmpeg = createFFmpeg({ log: true });
 
 export class SiteManagerIPFS implements SiteManagerInterface {
     config: SiteManagerConfig;
@@ -34,7 +34,7 @@ export class SiteManagerIPFS implements SiteManagerInterface {
 
     constructor(config?: SiteManagerConfig) {
         if (config !== null) {
-            this.config = {...DefaultSiteConfig, ...config}
+            this.config = { ...DefaultSiteConfig, ...config }
         } else {
             this.config = DefaultSiteConfig
         }
@@ -42,8 +42,8 @@ export class SiteManagerIPFS implements SiteManagerInterface {
         console.log("merged config: ", this.config);
 
         // Create data dir if not existing
-        if (!fs.existsSync(this.config.dataDir)) {
-            fs.mkdirSync(this.config.dataDir);
+        if (!existsSync(this.config.dataDir)) {
+            mkdirSync(this.config.dataDir);
         }
     }
 
@@ -58,11 +58,12 @@ export class SiteManagerIPFS implements SiteManagerInterface {
     }
 
     async initIpfsClient() {
-        console.warn("IPFS function is not ready yet, all changes will be saved in local dataDir")
         const url = new URL(this.config.storageNodeURL);
-        this.ipfsClient = await create({
+        this.ipfsClient = create({
             host: url.host, port: parseInt(url.port), protocol: url.protocol
         });
+
+        console.log(`IPFS endpoint config: ${JSON.stringify(this.ipfsClient.getEndpointConfig())}`);
     }
 
     getUserMetadata: (userId: string) => Promise<UserMetadata>;
@@ -78,7 +79,7 @@ export class SiteManagerIPFS implements SiteManagerInterface {
         // Create a sub directory under data dir
         const siteDir = path.resolve(path.join(this.config.dataDir, siteMetadata.siteId));
         if (!existsSync(siteDir)) {
-            fs.mkdirSync(siteDir);
+            mkdirSync(siteDir);
         } else {
             console.error("Got same UUID, hmm.....");
         }
@@ -100,14 +101,14 @@ export class SiteManagerIPFS implements SiteManagerInterface {
         if (!siteMediaDir.includes(this.config.dataDir)) {
             console.error(`directory to be removed (${siteMediaDir}) seems not under dataDir (${this.config.dataDir}), please double check the code`);
         } else {
-            fs.rmSync(siteMediaDir, {recursive: true, force: true});
+            rmSync(siteMediaDir, { recursive: true, force: true });
         }
         await this.updateStorage();
     };
 
     async getSite(siteId: string) {
         const siteMetafilePath = this.getSiteMetaFilePathViaSiteId(siteId);
-        let siteMetadata = fs.readFileSync(siteMetafilePath);
+        let siteMetadata = readFileSync(siteMetafilePath);
         await this.updateStorage();
         return JSON.parse(siteMetadata.toString());
     }
@@ -126,7 +127,7 @@ export class SiteManagerIPFS implements SiteManagerInterface {
 
         const siteDir = this.getSiteDirViaSiteId(reqData.siteId);
         const outputDir = path.join(siteDir, mediaMetadata.mediaId);
-        fs.mkdirSync(outputDir);
+        mkdirSync(outputDir);
         await this.generateHlsContent(reqData.tmpMediaPath, outputDir);
         await this.updateStorage();
         return mediaMetadata;
@@ -137,33 +138,27 @@ export class SiteManagerIPFS implements SiteManagerInterface {
     ///////////////////////////
     // utils methods
     ///////////////////////////
+
+    ////////////////////////////////////////////////
+    // local site directory related functions
+    ////////////////////////////////////////////////
+
     async saveSiteMetadata(siteMetadata: SiteMetadata, override: boolean) {
         const siteMetadataFilePath = this.getSiteMetaFilePath(siteMetadata);
 
         if (!existsSync(siteMetadataFilePath)) {
             console.log(`save site metadata to ${siteMetadataFilePath}`);
-            fs.writeFileSync(siteMetadataFilePath, JSON.stringify(siteMetadata));
+            writeFileSync(siteMetadataFilePath, JSON.stringify(siteMetadata));
         } else {
             if (override) {
                 console.log(`overrite site metadata file ${siteMetadataFilePath}`);
-                fs.writeFileSync(siteMetadataFilePath, JSON.stringify(siteMetadata));
+                writeFileSync(siteMetadataFilePath, JSON.stringify(siteMetadata));
             } else {
                 console.error("site metadata file existing and override option is false");
             }
         }
 
         await this.updateStorage();
-    }
-
-    // updateStorage update changes to IPFS storage
-    // TODO: Save data dir hash into dataDirHash variable
-    async updateStorage() {
-        await this.ipfsClient.addAll(this.config.dataDir)
-    }
-
-    // publishChanges invoke ipfs.publish to refresh published content
-    publishChanges() {
-        this.ipfsClient.name.publish("/ipfs/" + this.dataDirHash);
     }
 
     getSiteDirViaSiteId(siteId: string): string {
@@ -183,6 +178,10 @@ export class SiteManagerIPFS implements SiteManagerInterface {
         const siteDir = this.getSiteDirViaSiteId(siteId);
         return path.resolve(path.join(siteDir, "metadata.json"));
     }
+
+    ////////////////////////////////////////////////
+    // ffmpeg related functions
+    ////////////////////////////////////////////////
 
     // TODO: Move this function to separated media processing module
     async generateHlsContent(srcMediaPath: string, outputDir: string) {
@@ -210,7 +209,32 @@ export class SiteManagerIPFS implements SiteManagerInterface {
                 continue;
             }
             console.log(`file info: ${f}`)
-            fs.writeFileSync(path.join(outputDir, f), ffmpeg.FS('readFile', path.join(wasmFsOutputPath, f)));
+            writeFileSync(path.join(outputDir, f), ffmpeg.FS('readFile', path.join(wasmFsOutputPath, f)));
         }
+    }
+
+    ////////////////////////////////////////////////
+    // IPFS related functions
+    ////////////////////////////////////////////////
+
+    // updateStorage update changes to IPFS storage
+    // TODO: Save data dir hash into dataDirHash variable
+    async updateStorage() {
+        console.log(`prepare to update storage from ${this.config.dataDir}`)
+        const addOptions = {
+            pin: false,
+            wrapWithDirectory: true,
+            timeout: 10000
+        };
+
+
+        for await (const file of this.ipfsClient.addAll(globSource(this.config.dataDir, '**/*', null), addOptions)) {
+            console.log(file)
+        }
+    }
+
+    // publishChanges invoke ipfs.publish to refresh published content
+    async publishChanges() {
+        await this.ipfsClient.name.publish("/ipfs/" + this.dataDirHash);
     }
 }
