@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/tauri";
+import { Profile } from "./core/dao";
 import Database from "tauri-plugin-sql-api";
 import { BaseDirectory, createDir, writeFile } from "@tauri-apps/api/fs";
 import RouterLink from "./router/router";
@@ -8,6 +9,8 @@ import GlobalStyle from "./utils/GloablStyle";
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 
+
+const profile = new Profile();
 const db = await Database.load("sqlite:testFiles.db");
 
 function App() {
@@ -20,53 +23,23 @@ function App() {
   }
 
   async function createDataFolder() {
-    try {
-      await createDir("data", {
-        dir: BaseDirectory.Desktop,
-        recursive: true,
-      });
-    } catch (e) {
-      console.error(e);
-    }
+    profile.createDataFolder();
   };
 
   async function createDataFile() {
-    try {
-      await writeFile(
-        {
-          contents: "[]",
-          path: `data.json`,
-        },
-        {
-          dir: BaseDirectory.Desktop,
-        }
-      );
-    } catch (e) {
-      console.log(e);
-    }
+    profile.createDataFile();
   };
 
   async function createDB() {
-    const SQL = "CREATE TABLE todos (\
-      id INTEGER NOT NULL PRIMARY KEY,\
-      title VARCHAR NOT NULL,\
-      body TEXT NOT NULL DEFAULT '',\
-      done BOOLEAN NOT NULL DEFAULT 'f'\
-    );";
-
-    await db.execute(SQL);
+    profile.createDB();
   }
 
   async function insert() {
-    const SQL = `INSERT INTO todos VALUES(${Date.now()}, 'my task', 'task desc', 'f');`;
-
-    await db.execute(SQL);
+    profile.insert();
   }
 
   async function query() {
-    const SQL = "SELECT id, title, body, done from todos;";
-    let ret = await db.select(SQL);
-    console.log(ret);
+    profile.query();
   }
 
   return (
