@@ -7,7 +7,7 @@ import RouterLink from "./router/router";
 import { HashRouter as Router } from "react-router-dom";
 import GlobalStyle from "./utils/GloablStyle";
 import 'bootstrap/dist/css/bootstrap.min.css';
-
+import Init from "./components/init";
 
 
 
@@ -45,7 +45,7 @@ function App() {
 
   return (
     <div>
-
+      <Init />
       <Router>
         <RouterLink />
       </Router>
