@@ -5,7 +5,9 @@ export enum StorageBackend {
 export class SiteManagerConfig {
     // onchain storage configuration
     storageBackend: StorageBackend
-    storageNodeURL: string
+
+    // saves 
+    storageBaseDir: string
 
     // userId identifies owner of this site manager
     userId: string
