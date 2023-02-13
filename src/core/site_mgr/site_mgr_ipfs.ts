@@ -1,9 +1,8 @@
 import { existsSync, mkdirSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
-import { writeFile, readdir } from 'fs/promises';
 import { createFFmpeg, fetchFile } from '@ffmpeg/ffmpeg';
 
 import * as path from 'path';
-import { IPFSHTTPClient, create, globSource } from 'ipfs-http-client';
+import { globSource, create } from 'ipfs-core';
 import { v4 as uuidv4 } from 'uuid';
 
 import {
@@ -15,11 +14,12 @@ import {
     UserMetadata
 } from './models';
 import { SiteManagerInterface } from "./interface";
+import { fs } from '@tauri-apps/api';
 
 
 const DefaultSiteConfig: SiteManagerConfig = {
     storageBackend: StorageBackend.IPFS,
-    storageNodeURL: "http://127.0.0.1:5001",
+    storageBaseDir: '',
     userId: "",
     dataDir: "",
 };
@@ -28,7 +28,7 @@ const ffmpeg = createFFmpeg({ log: true });
 
 export class SiteManagerIPFS implements SiteManagerInterface {
     config: SiteManagerConfig;
-    ipfsClient: IPFSHTTPClient;
+    ipfsClient: any;
 
     dataDirHash: string;
 
@@ -52,18 +52,25 @@ export class SiteManagerIPFS implements SiteManagerInterface {
         await this.initIpfsClient();
 
         // load ffmpeg
+        // Note: after loading ffmpeg, all error messages will
         await ffmpeg.load();
 
         console.log("init done")
     }
 
     async initIpfsClient() {
-        const url = new URL(this.config.storageNodeURL);
-        this.ipfsClient = create({
-            host: url.host, port: parseInt(url.port), protocol: url.protocol
-        });
+        const createOptions = {
+            repo: this.config.storageBaseDir
+        };
+        
+        this.ipfsClient = await create(createOptions);
+        // host: url.host, port: parseInt(url.port), protocol: url.protocol
 
-        console.log(`IPFS endpoint config: ${JSON.stringify(this.ipfsClient.getEndpointConfig())}`);
+        let serverConfig = await this.ipfsClient.config.getAll();
+        let keysList = await this.ipfsClient.key.list();
+
+        console.log(`IPFS client config:`, serverConfig);
+        console.log(`keys list:`, keysList);
     }
 
     getUserMetadata: (userId: string) => Promise<UserMetadata>;
