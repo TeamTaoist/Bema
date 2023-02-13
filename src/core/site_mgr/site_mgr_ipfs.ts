@@ -83,13 +83,23 @@ export class SiteManagerIPFS implements SiteManagerInterface {
             createdAt: Date.now(),
             updatedAt: Date.now(),
         };
-        // Create a sub directory under data dir
+
+        // Create a sub directory under data dir for saving data in sites
         const siteDir = path.resolve(path.join(this.config.dataDir, siteMetadata.siteId));
         if (!existsSync(siteDir)) {
             mkdirSync(siteDir);
         } else {
             console.error("Got same UUID, hmm.....");
         }
+
+        // Generate new pub key for the site w/ siteId as the key name,
+        // then export the pem to site directory
+        let siteKey = await this.ipfsClient.key.gen(siteMetadata.siteId, { type: 'ed25519' });
+        let siteKeyPem = await this.ipfsClient.key.export('self', 'password');
+        let siteKeyFile = path.join(siteDir, "sitekey.pem");
+        writeFileSync(siteKeyFile, JSON.stringify(siteKeyPem));
+
+        console.log(`Generated new key for site: ${siteMetadata.siteId}, key: ${JSON.stringify(siteKey)}, and the pem file is saved at ${siteKeyFile}`);
 
         await this.saveSiteMetadata(siteMetadata, false);
 
@@ -100,7 +110,7 @@ export class SiteManagerIPFS implements SiteManagerInterface {
 
     async updateSite(siteMetadata: SiteMetadata) {
         await this.saveSiteMetadata(siteMetadata, true);
-        await this.updateStorage();
+        await this.updateAllToStorage();
     };
 
     async deleteSite(siteId: string) {
@@ -110,13 +120,13 @@ export class SiteManagerIPFS implements SiteManagerInterface {
         } else {
             rmSync(siteMediaDir, { recursive: true, force: true });
         }
-        await this.updateStorage();
+        await this.updateAllToStorage();
     };
 
     async getSite(siteId: string) {
         const siteMetafilePath = this.getSiteMetaFilePathViaSiteId(siteId);
         let siteMetadata = readFileSync(siteMetafilePath);
-        await this.updateStorage();
+        await this.updateAllToStorage();
         return JSON.parse(siteMetadata.toString());
     }
 
@@ -136,7 +146,7 @@ export class SiteManagerIPFS implements SiteManagerInterface {
         const outputDir = path.join(siteDir, mediaMetadata.mediaId);
         mkdirSync(outputDir);
         await this.generateHlsContent(reqData.tmpMediaPath, outputDir);
-        await this.updateStorage();
+        await this.updateAllToStorage();
         return mediaMetadata;
     };
 
@@ -165,7 +175,7 @@ export class SiteManagerIPFS implements SiteManagerInterface {
             }
         }
 
-        await this.updateStorage();
+        await this.updateSiteToStorage(siteMetadata.siteId);
     }
 
     getSiteDirViaSiteId(siteId: string): string {
