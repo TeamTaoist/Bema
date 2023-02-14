@@ -5,7 +5,7 @@
 
 import {SiteManagerIPFS} from "./site_mgr_ipfs";
 import {SiteManagerConfig, UploadMediaRequest} from "./models";
-import {readdir} from 'node:fs/promises'
+import {readdir} from '@tauri-apps/api/fs'
 import {join} from 'node:path'
 
 
