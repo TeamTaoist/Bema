@@ -38,10 +38,8 @@ export class SiteManagerIPFS implements SiteManagerInterface {
     config: SiteManagerConfig;
     ipfsClient: any;
 
-    dataDirHash: string;
-
     // Mapping between site id and pubkey
-    siteIdPubkeyMapping: {};
+    siteIdDataHashMapping: {};
 
     constructor(config?: SiteManagerConfig) {
         if (config !== null) {
@@ -57,7 +55,7 @@ export class SiteManagerIPFS implements SiteManagerInterface {
             mkdirSync(this.config.dataDir);
         }
 
-        this.siteIdPubkeyMapping = {};
+        this.siteIdDataHashMapping = {};
     }
 
     async init() {
@@ -77,7 +75,11 @@ export class SiteManagerIPFS implements SiteManagerInterface {
 
     async initIpfsClient() {
         const createOptions = {
-            repo: this.config.storageBaseDir
+            repo: this.config.storageBaseDir,
+            Addresses: {
+                API: '/ip4/127.0.0.1/tcp/5001',
+                Gateway: '/ip4/127.0.0.1/tcp/8080'
+            }
         };
 
         this.ipfsClient = await create(createOptions);
@@ -196,7 +198,7 @@ export class SiteManagerIPFS implements SiteManagerInterface {
     async saveMediaMetadata(siteId: string, mediaMetadata: SiteMediaMetadata) {
         const metadataDir = path.join(this.getSiteDirViaSiteId(siteId), mediaMetadata.mediaId);
         console.log(`save media metadata to ${metadataDir}`);
-        
+
         this.saveMetadata(JSON.stringify(mediaMetadata), metadataDir, true);
         await this.updateSiteToStorage(siteId);
     }
@@ -275,7 +277,6 @@ export class SiteManagerIPFS implements SiteManagerInterface {
     ////////////////////////////////////////////////
 
     // updateAllToStorage update all sites to IPFS storage.
-    // TODO: Save data dir hash into dataDirHash variable
     async updateAllToStorage() {
         console.log(`prepare to update all storage from ${this.config.dataDir}`)
         await this.addDirectoryToStorage(this.config.dataDir, { updateAll: true });
@@ -309,22 +310,26 @@ export class SiteManagerIPFS implements SiteManagerInterface {
             if (options.updateAll === true) {
                 // In full update mode, the addedPath has no slash '/' character is site directory, update the cid/siteId mapping
                 if ((!addedPath.includes('/')) && (addedPath !== '')) {
-                    this.siteIdPubkeyMapping[addedPath] = addResult.cid.toString();
+                    this.siteIdDataHashMapping[addedPath] = addResult.cid.toString();
                 }
             } else {
                 // In side update mode, the root path is ''
                 if (addedPath === '') {
-                    this.siteIdPubkeyMapping[options.siteId] = addResult.cid.toString();
+                    this.siteIdDataHashMapping[options.siteId] = addResult.cid.toString();
                 }
             }
         }
 
     }
 
-    // publishChanges invoke ipfs.publish to refresh published content
-    async publishChanges(siteId?: string) {
-        console.log(`prepare to publish site`);
-        let publishResult = await this.ipfsClient.name.publish("/ipfs/" + this.dataDirHash);
-        console.log(`site publish result: ${JSON.stringify(publishResult)}`);
+    async publishSite(siteId: string) {
+        const siteHash = this.siteIdDataHashMapping[siteId];
+        if (siteHash !== null) {
+            console.log(`prepare to publish site ${siteId}, hash: ${siteHash}`);
+            let publishResult = await this.ipfsClient.name.publish("/ipfs/" + this.siteIdDataHashMapping[siteId], { key: siteId });
+            console.log(`site publish result: `, publishResult);
+        } else {
+            console.error(`site ${siteId} has no dataHash saved, upload it to IPFS first`);
+        }
     }
 }
