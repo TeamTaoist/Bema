@@ -26,11 +26,22 @@ const DefaultSiteConfig: SiteManagerConfig = {
 
 const ffmpeg = createFFmpeg({ log: true });
 
+const mediaEntryFileName = 'index.m3u8'
+const metadataFileName = 'metadata.json'
+
+type AddDirectoryOptions = {
+    updateAll?: boolean,
+    siteId?: string,
+}
+
 export class SiteManagerIPFS implements SiteManagerInterface {
     config: SiteManagerConfig;
     ipfsClient: any;
 
     dataDirHash: string;
+
+    // Mapping between site id and pubkey
+    siteIdPubkeyMapping: {};
 
     constructor(config?: SiteManagerConfig) {
         if (config !== null) {
@@ -45,15 +56,21 @@ export class SiteManagerIPFS implements SiteManagerInterface {
         if (!existsSync(this.config.dataDir)) {
             mkdirSync(this.config.dataDir);
         }
+
+        this.siteIdPubkeyMapping = {};
     }
 
     async init() {
+        await ffmpeg.load();
+
         // Connect to IPFS node
         await this.initIpfsClient();
 
+        // TODO: Load existing sites
+
         // load ffmpeg
-        // Note: after loading ffmpeg, all error messages will
-        await ffmpeg.load();
+        // Note: after loading ffmpeg, all error messages will be print by fferr and the real calltrace will be hidden
+        // await ffmpeg.load();
 
         console.log("init done")
     }
@@ -62,9 +79,8 @@ export class SiteManagerIPFS implements SiteManagerInterface {
         const createOptions = {
             repo: this.config.storageBaseDir
         };
-        
+
         this.ipfsClient = await create(createOptions);
-        // host: url.host, port: parseInt(url.port), protocol: url.protocol
 
         let serverConfig = await this.ipfsClient.config.getAll();
         let keysList = await this.ipfsClient.key.list();
@@ -101,7 +117,7 @@ export class SiteManagerIPFS implements SiteManagerInterface {
 
         console.log(`Generated new key for site: ${siteMetadata.siteId}, key: ${JSON.stringify(siteKey)}, and the pem file is saved at ${siteKeyFile}`);
 
-        await this.saveSiteMetadata(siteMetadata, false);
+        await this.updateSite(siteMetadata);
 
         // TODO: confirm whether publishing is required here
 
@@ -110,9 +126,11 @@ export class SiteManagerIPFS implements SiteManagerInterface {
 
     async updateSite(siteMetadata: SiteMetadata) {
         await this.saveSiteMetadata(siteMetadata, true);
-        await this.updateAllToStorage();
+        await this.updateSiteToStorage(siteMetadata.siteId);
     };
 
+    // NOT_TESTED
+    // TODO: How to delete file on ipfs? file.rm?
     async deleteSite(siteId: string) {
         const siteMediaDir = this.getSiteDirViaSiteId(siteId);
         if (!siteMediaDir.includes(this.config.dataDir)) {
@@ -126,7 +144,6 @@ export class SiteManagerIPFS implements SiteManagerInterface {
     async getSite(siteId: string) {
         const siteMetafilePath = this.getSiteMetaFilePathViaSiteId(siteId);
         let siteMetadata = readFileSync(siteMetafilePath);
-        await this.updateAllToStorage();
         return JSON.parse(siteMetadata.toString());
     }
 
@@ -146,11 +163,22 @@ export class SiteManagerIPFS implements SiteManagerInterface {
         const outputDir = path.join(siteDir, mediaMetadata.mediaId);
         mkdirSync(outputDir);
         await this.generateHlsContent(reqData.tmpMediaPath, outputDir);
-        await this.updateAllToStorage();
+        await this.updateSiteToStorage(reqData.siteId);
+        mediaMetadata.entryUrl = path.join(mediaMetadata.mediaId, mediaEntryFileName);
+        await this.saveMediaMetadata(reqData.siteId, mediaMetadata);
         return mediaMetadata;
     };
 
-    viewMedia: (mediaId: string) => Promise<SiteMediaMetadata>;
+    async getMediaMetadata(siteId: string, mediaId: string) {
+        const mediaMetadataFilePath = path.join(
+            this.getSiteDirViaSiteId(siteId),
+            mediaId,
+            metadataFileName
+        );
+        let mediaMetadataContent = readFileSync(mediaMetadataFilePath);
+        const mediaMetadata: SiteMediaMetadata = JSON.parse(mediaMetadataContent.toString());
+        return mediaMetadata;
+    }
 
     ///////////////////////////
     // utils methods
@@ -161,21 +189,33 @@ export class SiteManagerIPFS implements SiteManagerInterface {
     ////////////////////////////////////////////////
 
     async saveSiteMetadata(siteMetadata: SiteMetadata, override: boolean) {
-        const siteMetadataFilePath = this.getSiteMetaFilePath(siteMetadata);
+        this.saveMetadata(JSON.stringify(siteMetadata), this.getSiteDir(siteMetadata), override);
+        await this.updateSiteToStorage(siteMetadata.siteId);
+    }
 
-        if (!existsSync(siteMetadataFilePath)) {
-            console.log(`save site metadata to ${siteMetadataFilePath}`);
-            writeFileSync(siteMetadataFilePath, JSON.stringify(siteMetadata));
+    async saveMediaMetadata(siteId: string, mediaMetadata: SiteMediaMetadata) {
+        const metadataDir = path.join(this.getSiteDirViaSiteId(siteId), mediaMetadata.mediaId);
+        console.log(`save media metadata to ${metadataDir}`);
+        
+        this.saveMetadata(JSON.stringify(mediaMetadata), metadataDir, true);
+        await this.updateSiteToStorage(siteId);
+    }
+
+    // save metadata to directory, create a separated function to handle site and media cases
+    saveMetadata(metadataContent: string, directory: string, override: boolean) {
+        const metadataFilePath = path.join(directory, metadataFileName);
+
+        if (!existsSync(metadataFilePath)) {
+            console.log(`save metadata to ${metadataFilePath}`);
+            writeFileSync(metadataFilePath, metadataContent);
         } else {
             if (override) {
-                console.log(`overrite site metadata file ${siteMetadataFilePath}`);
-                writeFileSync(siteMetadataFilePath, JSON.stringify(siteMetadata));
+                console.log(`overrite metadata file ${metadataFilePath}`);
+                writeFileSync(metadataFilePath, metadataContent);
             } else {
                 console.error("site metadata file existing and override option is false");
             }
         }
-
-        await this.updateSiteToStorage(siteMetadata.siteId);
     }
 
     getSiteDirViaSiteId(siteId: string): string {
@@ -188,12 +228,12 @@ export class SiteManagerIPFS implements SiteManagerInterface {
 
     getSiteMetaFilePath(siteMetadata: SiteMetadata): string {
         const siteDir = this.getSiteDir(siteMetadata);
-        return path.resolve(path.join(siteDir, "metadata.json"));
+        return path.resolve(path.join(siteDir, mediaEntryFileName));
     }
 
     getSiteMetaFilePathViaSiteId(siteId: string): string {
         const siteDir = this.getSiteDirViaSiteId(siteId);
-        return path.resolve(path.join(siteDir, "metadata.json"));
+        return path.resolve(path.join(siteDir, metadataFileName));
     }
 
     ////////////////////////////////////////////////
@@ -217,7 +257,7 @@ export class SiteManagerIPFS implements SiteManagerInterface {
             '30',
             '-hls_list_size',
             '0',
-            path.join(wasmFsOutputPath, 'index.m3u8'),
+            path.join(wasmFsOutputPath, mediaEntryFileName),
         );
 
         console.log(`Try to getting data form ${wasmFsOutputPath}`);
@@ -234,28 +274,55 @@ export class SiteManagerIPFS implements SiteManagerInterface {
     // IPFS related functions
     ////////////////////////////////////////////////
 
-    // updateStorage update changes to IPFS storage
+    // updateAllToStorage update all sites to IPFS storage.
     // TODO: Save data dir hash into dataDirHash variable
-    async updateStorage() {
-        console.log(`prepare to update storage from ${this.config.dataDir}`)
+    async updateAllToStorage() {
+        console.log(`prepare to update all storage from ${this.config.dataDir}`)
+        await this.addDirectoryToStorage(this.config.dataDir, { updateAll: true });
+    }
+
+    // updateSiteToStorage update specified site to IPFS storage.
+    async updateSiteToStorage(siteId: string) {
+        console.log(`prepare to update site storage of ${siteId}`)
+        await this.addDirectoryToStorage(
+            path.join(this.config.dataDir, siteId),
+            { updateAll: false, siteId: siteId }
+        );
+    }
+
+    // addDirectoryToStorage execute the add action, and the data hash will be saved after adding done
+    async addDirectoryToStorage(dirPath: string, options?: AddDirectoryOptions) {
+        console.log(`prepare to update storage from ${dirPath}, update opts: `, JSON.stringify(options));
         const addOptions = {
+            // TODO: Change to true in production env
             pin: false,
             wrapWithDirectory: true,
             timeout: 10000
         };
 
+        let files = await globSource(dirPath, '**/*', null);
+        console.log(files);
 
-        for await (const addResult of this.ipfsClient.addAll(globSource(this.config.dataDir, '**/*', null), addOptions)) {
+        for await (const addResult of this.ipfsClient.addAll(globSource(dirPath, '**/*', null), addOptions)) {
             const addedPath = addResult.path;
-            if (addedPath === '') {
-                this.dataDirHash = addResult.cid.toString();
-                console.log(this.dataDirHash);
+            console.log(addResult);
+            if (options.updateAll === true) {
+                // In full update mode, the addedPath has no slash '/' character is site directory, update the cid/siteId mapping
+                if ((!addedPath.includes('/')) && (addedPath !== '')) {
+                    this.siteIdPubkeyMapping[addedPath] = addResult.cid.toString();
+                }
+            } else {
+                // In side update mode, the root path is ''
+                if (addedPath === '') {
+                    this.siteIdPubkeyMapping[options.siteId] = addResult.cid.toString();
+                }
             }
         }
+
     }
 
     // publishChanges invoke ipfs.publish to refresh published content
-    async publishChanges() {
+    async publishChanges(siteId?: string) {
         console.log(`prepare to publish site`);
         let publishResult = await this.ipfsClient.name.publish("/ipfs/" + this.dataDirHash);
         console.log(`site publish result: ${JSON.stringify(publishResult)}`);
