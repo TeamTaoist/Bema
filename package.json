@@ -33,7 +33,6 @@
     "react-router-dom": "^6.7.0",
     "sass": "^1.57.1",
     "styled-components": "^5.3.6",
-    "tauri-plugin-sql-api": "https://github.com/tauri-apps/tauri-plugin-sql",
     "video.js": "^7.21.1"
   },
   "devDependencies": {
