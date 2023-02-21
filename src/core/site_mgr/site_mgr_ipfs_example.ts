@@ -3,10 +3,8 @@
 // Example script for testing functions,
 // usage for now: tsx src/core/site_mgr/site_mgr_ipfs_example.ts <media path>
 
-import {SiteManagerIPFS} from "./site_mgr_ipfs";
-import {SiteManagerConfig, UploadMediaRequest} from "./models";
-import {readdir} from '@tauri-apps/api/fs'
-import {join} from 'node:path'
+import { SiteManagerIPFS } from "./site_mgr_ipfs";
+import { SiteManagerConfig, UploadMediaRequest } from "./models";
 
 
 let siteConfig = new SiteManagerConfig()
@@ -17,7 +15,7 @@ let siteMgr: SiteManagerIPFS = new SiteManagerIPFS(siteConfig);
     await siteMgr.init();
     let siteMetadata = await siteMgr.createSite("testSite", "this is a test site");
     console.log(`create site rslt: ${JSON.stringify(siteMetadata)}`);
-    
+
     let newMediaReq: UploadMediaRequest = {
         siteId: siteMetadata.siteId,
         title: "A test media",
