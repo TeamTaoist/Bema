@@ -1,7 +1,7 @@
-import {exists, createDir, removeDir, readTextFile, writeTextFile, writeBinaryFile, BaseDirectory } from '@tauri-apps/api/fs'
+import { exists, createDir, removeDir, readTextFile, writeTextFile, writeBinaryFile, BaseDirectory } from '@tauri-apps/api/fs'
 import { createFFmpeg, fetchFile } from '@ffmpeg/ffmpeg';
 
-import * as path from 'path';
+import { resolve, join, basename, appDataDir } from '@tauri-apps/api/path';
 import { IPFSHTTPClient, create, globSource } from 'ipfs-http-client';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -31,6 +31,8 @@ export class SiteManagerIPFS implements SiteManagerInterface {
 
     dataDirHash: string;
 
+    appDataDirPath: string;
+
     constructor(config?: SiteManagerConfig) {
         if (config !== null) {
             this.config = { ...DefaultSiteConfig, ...config }
@@ -41,7 +43,7 @@ export class SiteManagerIPFS implements SiteManagerInterface {
         console.log("merged config: ", this.config);
 
         // Create data dir if not existing
-        if (!exists(this.config.dataDir, {dir: BaseDirectory.AppData, })) {
+        if (!exists(this.config.dataDir, { dir: BaseDirectory.AppData, })) {
             createDir(this.config.dataDir, { dir: BaseDirectory.AppData, recursive: true });
         }
     }
@@ -52,6 +54,8 @@ export class SiteManagerIPFS implements SiteManagerInterface {
 
         // load ffmpeg
         await ffmpeg.load();
+
+        this.appDataDirPath = await appDataDir();
 
         console.log("init done")
     }
@@ -76,8 +80,8 @@ export class SiteManagerIPFS implements SiteManagerInterface {
             updatedAt: Date.now(),
         };
         // Create a sub directory under data dir
-        const siteDir = path.resolve(path.join(this.config.dataDir, siteMetadata.siteId));
-        if (!exists(siteDir, {dir: BaseDirectory.AppData, })) {
+        const siteDir = await resolve(await join(this.appDataDirPath, this.config.dataDir, siteMetadata.siteId));
+        if (!exists(siteDir, { dir: BaseDirectory.AppData, })) {
             createDir(siteDir, { dir: BaseDirectory.AppData, recursive: true });
         } else {
             console.error("Got same UUID, hmm.....");
@@ -143,9 +147,9 @@ export class SiteManagerIPFS implements SiteManagerInterface {
     ////////////////////////////////////////////////
 
     async saveSiteMetadata(siteMetadata: SiteMetadata, override: boolean) {
-        const siteMetadataFilePath = this.getSiteMetaFilePath(siteMetadata);
+        const siteMetadataFilePath = await this.getSiteMetaFilePath(siteMetadata);
 
-        if (!exists(siteMetadataFilePath, {dir: BaseDirectory.AppData, })) {
+        if (!exists(siteMetadataFilePath, { dir: BaseDirectory.AppData, })) {
             console.log(`save site metadata to ${siteMetadataFilePath}`);
             writeTextFile(siteMetadataFilePath, JSON.stringify(siteMetadata));
         } else {
@@ -160,22 +164,22 @@ export class SiteManagerIPFS implements SiteManagerInterface {
         await this.updateStorage();
     }
 
-    getSiteDirViaSiteId(siteId: string): string {
-        return path.resolve(path.join(this.config.dataDir, siteId));
+    async getSiteDirViaSiteId(siteId: string): Promise<string> {
+        return await resolve(await join(this.appDataDirPath, this.config.dataDir, siteId));
     }
 
-    getSiteDir(siteMetadata: SiteMetadata): string {
-        return this.getSiteDirViaSiteId(siteMetadata.siteId);
+    async getSiteDir(siteMetadata: SiteMetadata): Promise<string> {
+        return await this.getSiteDirViaSiteId(siteMetadata.siteId);
     }
 
-    getSiteMetaFilePath(siteMetadata: SiteMetadata): string {
-        const siteDir = this.getSiteDir(siteMetadata);
-        return path.resolve(path.join(siteDir, "metadata.json"));
+    async getSiteMetaFilePath(siteMetadata: SiteMetadata): Promise<string> {
+        const siteDir = await this.getSiteDir(siteMetadata);
+        return await resolve(await join(siteDir, "metadata.json"));
     }
 
-    getSiteMetaFilePathViaSiteId(siteId: string): string {
-        const siteDir = this.getSiteDirViaSiteId(siteId);
-        return path.resolve(path.join(siteDir, "metadata.json"));
+    async getSiteMetaFilePathViaSiteId(siteId: string): Promise<string> {
+        const siteDir = await this.getSiteDirViaSiteId(siteId);
+        return await resolve(await join(siteDir, "metadata.json"));
     }
 
     ////////////////////////////////////////////////
@@ -187,8 +191,10 @@ export class SiteManagerIPFS implements SiteManagerInterface {
         // Save media file from src media path to ffmpeg.wasm FS.
         // generate uuid for saving file under processing to avoid overriding
         const baseDir = uuidv4();
-        const tmpFileName = path.join(baseDir, path.basename(srcMediaPath));
-        const wasmFsOutputPath = path.join(baseDir, "output");
+        const tmpFileName = await join(baseDir, await basename(srcMediaPath));
+        const wasmFsOutputPath = await join(baseDir, "output");
+        const indexPath = await join(wasmFsOutputPath, 'index.m3u8');
+
         ffmpeg.FS("mkdir", baseDir);
         ffmpeg.FS("mkdir", wasmFsOutputPath);
         ffmpeg.FS("writeFile", tmpFileName, await fetchFile(srcMediaPath));
@@ -199,7 +205,7 @@ export class SiteManagerIPFS implements SiteManagerInterface {
             '30',
             '-hls_list_size',
             '0',
-            path.join(wasmFsOutputPath, 'index.m3u8'),
+            indexPath,
         );
 
         console.log(`Try to getting data form ${wasmFsOutputPath}`);
@@ -208,7 +214,7 @@ export class SiteManagerIPFS implements SiteManagerInterface {
                 continue;
             }
             console.log(`file info: ${f}`)
-            writeBinaryFile(path.join(outputDir, f), ffmpeg.FS('readFile', path.join(wasmFsOutputPath, f)));
+            writeBinaryFile(await join(outputDir, f), ffmpeg.FS('readFile', await join(wasmFsOutputPath, f)));
         }
     }
 
