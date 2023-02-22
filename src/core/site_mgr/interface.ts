@@ -14,5 +14,5 @@ export interface SiteManagerInterface {
 
     // Media related
     uploadMedia: (reqData: UploadMediaRequest) => Promise<SiteMediaMetadata>;
-    viewMedia: (mediaId: string) => Promise<SiteMediaMetadata>;
+    getMediaMetadata: (siteId: string, mediaId: string) => Promise<SiteMediaMetadata>;
 }
