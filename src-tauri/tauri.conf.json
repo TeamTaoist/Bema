@@ -26,7 +26,8 @@
         "all": true,
         "scope": [
           "$APP/*",
-          "$DESKTOP/*"
+          "$DESKTOP/*",
+          "$APPDATA/*/*"
         ]
       },
       "path": {

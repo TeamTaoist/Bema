@@ -244,7 +244,7 @@ export default function Layout(props){
             showSuccess &&<SuccessBox>
                 <SuccessInner>
                     <div className="top">
-                        <img src={SuccessImg} alt=""/>
+                        {/*<img src={SuccessImg} alt=""/>*/}
                     </div>
                     <div>
                         Add Success !

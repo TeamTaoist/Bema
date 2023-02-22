@@ -8,7 +8,7 @@ import { HashRouter as Router } from "react-router-dom";
 import GlobalStyle from "./utils/GloablStyle";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import InitPage from "./components/init";
-
+import {InfoContextProvider} from "./api/contracts";
 
 
 const profile = new Profile();
@@ -45,6 +45,7 @@ function App() {
 
   return (
     <div>
+      <InfoContextProvider>
       <InitPage />
       <Router>
         <RouterLink />
@@ -77,6 +78,7 @@ function App() {
       {/*    </button>*/}
       {/*  </div>*/}
       {/*</div>*/}
+      </InfoContextProvider>
     </div>
   );
 }
