@@ -2,7 +2,7 @@ import { exists, createDir, removeDir, readTextFile, writeTextFile, writeBinaryF
 import { createFFmpeg, fetchFile } from '@ffmpeg/ffmpeg';
 
 import { resolve, join, basename, appDataDir } from '@tauri-apps/api/path';
-import { IPFSHTTPClient, create, globSource } from 'ipfs-http-client';
+import { globSource, create } from 'ipfs-core';
 import { v4 as uuidv4 } from 'uuid';
 
 import {
