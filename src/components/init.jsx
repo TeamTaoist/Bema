@@ -22,21 +22,21 @@ export default function InitPage(){
     const [status,setStatus]= useState(false);
 
     useEffect(()=>{
-        // let siteConfig = new SiteManagerConfig();
-        // siteConfig.dataDir = "tmpdata";
-        // let siteMgr = new SiteManagerIPFS(siteConfig);
-        // (async () => {
-        //     try{
-        //         await siteMgr.init();
-        //         console.log(siteMgr)
-        //         dispatch({type:'SET_SITEMGR',payload:siteMgr})
-        //         setStatus(true);
-        //     }catch (e) {
-        //         console.error(e)
-        //         setStatus(false);
-        //     }
-        //
-        // })()
+        let siteConfig = new SiteManagerConfig();
+        siteConfig.dataDir = "tmpdata";
+        let siteMgr = new SiteManagerIPFS(siteConfig);
+        (async () => {
+            try{
+                await siteMgr.init();
+                console.log(siteMgr)
+                dispatch({type:'SET_SITEMGR',payload:siteMgr})
+                setStatus(true);
+            }catch (e) {
+                console.error(e)
+                setStatus(false);
+            }
+
+        })()
 
     },[])
 
