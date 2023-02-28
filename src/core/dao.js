@@ -3,12 +3,12 @@ import Database from "tauri-plugin-sql-api";
 
 export class Profile {
     constructor() {
-        console.log("");
+        console.log("Profile constructor");
         this.loadDB();
     }
 
     async loadDB() {
-        this.db = await Database.load("sqlite:test.db");
+        // this.db = await Database.load("sqlite:test.db");
     }
 
     async createDataFolder() {

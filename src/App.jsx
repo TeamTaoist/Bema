@@ -12,7 +12,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 
 
 const profile = new Profile();
-const db = await Database.load("sqlite:testFiles.db");
+// const db = await Database.load("sqlite:testFiles.db");
 
 function App() {
   const [greetMsg, setGreetMsg] = useState("");
@@ -50,33 +50,34 @@ function App() {
         <RouterLink />
       </Router>
       <GlobalStyle />
-      {/*<div className="row">*/}
-      {/*  <div>*/}
-      {/*    <input*/}
-      {/*      id="greet-input"*/}
-      {/*      onChange={(e) => setName(e.currentTarget.value)}*/}
-      {/*      placeholder="Enter a name..."*/}
-      {/*    />*/}
-      {/*    <button type="button" onClick={() => greet()}>*/}
-      {/*      Greet*/}
-      {/*    </button>*/}
-      {/*    <button type="button" onClick={() => createDB()}>*/}
-      {/*      Create DB*/}
-      {/*    </button>*/}
-      {/*    <button type="button" onClick={() => insert()}>*/}
-      {/*      Insert Record*/}
-      {/*    </button>*/}
-      {/*    <button type="button" onClick={() => query()}>*/}
-      {/*      Query Record*/}
-      {/*    </button>*/}
-      {/*    <button type="button" onClick={() => createDataFolder()}>*/}
-      {/*      Create DataFolder*/}
-      {/*    </button>*/}
-      {/*    <button type="button" onClick={() => createDataFile()}>*/}
-      {/*      Create DataFile*/}
-      {/*    </button>*/}
-      {/*  </div>*/}
-      {/*</div>*/}
+      
+      {/* <div className="row">
+       <div>
+         <input
+           id="greet-input"
+           onChange={(e) => setName(e.currentTarget.value)}
+           placeholder="Enter a name..."
+         />
+         <button type="button" onClick={() => greet()}>
+           Greet
+         </button>
+         <button type="button" onClick={() => createDB()}>
+           Create DB
+         </button>
+         <button type="button" onClick={() => insert()}>
+           Insert Record
+         </button>
+         <button type="button" onClick={() => query()}>
+           Query Record
+         </button>
+         <button type="button" onClick={() => createDataFolder()}>
+           Create DataFolder
+         </button>
+         <button type="button" onClick={() => createDataFile()}>
+           Create DataFile
+         </button>
+       </div>
+      </div> */}
     </div>
   );
 }
