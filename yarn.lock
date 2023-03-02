@@ -4051,7 +4051,7 @@ ipfs-unixfs@^9.0.0:
     err-code "^3.0.1"
     protobufjs "^7.0.0"
 
-ipfs-utils@^9.0.13, ipfs-utils@^9.0.9:
+ipfs-utils@^9.0.13, ipfs-utils@^9.0.7, ipfs-utils@^9.0.9:
   version "9.0.14"
   resolved "https://registry.npmmirror.com/ipfs-utils/-/ipfs-utils-9.0.14.tgz#24f5fda1f4567685eb32bca2543d518f95fd8704"
   integrity sha512-zIaiEGX18QATxgaS0/EOQNoo33W0islREABAcxXE8n7y2MGAlB+hdsxXn4J0hGZge8IqVQhW8sWIb+oJz2yEvg==
@@ -4696,6 +4696,31 @@ kind-of@^6.0.0, kind-of@^6.0.2:
   version "6.0.3"
   resolved "https://registry.npmmirror.com/kind-of/-/kind-of-6.0.3.tgz#07c05034a6c349fa06e24fa35aa76db4580ce4dd"
   integrity sha512-dcS1ul+9tmeD95T+x28/ehLgd9mENa3LsvDTtzm3vyBEO7RPptvAD+t44WVXaUjTBRcrpFeFlC8WCruUR456hw==
+
+kubo-rpc-client@^3.0.1:
+  version "3.0.1"
+  resolved "https://registry.npmmirror.com/kubo-rpc-client/-/kubo-rpc-client-3.0.1.tgz#61e4c64ccab6bf1bb6147dc8c45a423b95638fa7"
+  integrity sha512-2SMH/eCZlwR/4e9Aqr0HC1gJvCDTsgBRWRdu4LjHLrRwGsmDAl32vK4PkwkKfYwgJMHY3lgA6eZzaOLzrPwxFg==
+  dependencies:
+    "@ipld/dag-cbor" "^9.0.0"
+    "@ipld/dag-json" "^10.0.0"
+    "@ipld/dag-pb" "^4.0.0"
+    "@libp2p/crypto" "^1.0.11"
+    "@libp2p/logger" "^2.0.5"
+    "@libp2p/peer-id" "^2.0.0"
+    "@multiformats/multiaddr" "^11.1.5"
+    any-signal "^3.0.1"
+    dag-jose "^4.0.0"
+    err-code "^3.0.1"
+    ipfs-core-utils "^0.18.0"
+    ipfs-utils "^9.0.7"
+    it-first "^2.0.0"
+    it-last "^2.0.0"
+    merge-options "^3.0.4"
+    multiformats "^11.0.0"
+    parse-duration "^1.0.2"
+    stream-to-it "^0.2.4"
+    uint8arrays "^4.0.3"
 
 lazy-cache@^1.0.3:
   version "1.0.4"
@@ -5499,7 +5524,7 @@ parse-asn1@^5.0.0, parse-asn1@^5.1.5:
     pbkdf2 "^3.0.3"
     safe-buffer "^5.1.1"
 
-parse-duration@^1.0.0:
+parse-duration@^1.0.0, parse-duration@^1.0.2:
   version "1.0.2"
   resolved "https://registry.npmmirror.com/parse-duration/-/parse-duration-1.0.2.tgz#b9aa7d3a1363cc7e8845bea8fd3baf8a11df5805"
   integrity sha512-Dg27N6mfok+ow1a2rj/nRjtCfaKrHUZV2SJpEn/s8GaVUSlf4GGRCRP1c13Hj+wfPKVMrFDqLMLITkYKgKxyyg==
@@ -6464,7 +6489,7 @@ stream-http@^2.7.2:
     to-arraybuffer "^1.0.0"
     xtend "^4.0.0"
 
-stream-to-it@^0.2.2:
+stream-to-it@^0.2.2, stream-to-it@^0.2.4:
   version "0.2.4"
   resolved "https://registry.npmmirror.com/stream-to-it/-/stream-to-it-0.2.4.tgz#d2fd7bfbd4a899b4c0d6a7e6a533723af5749bd0"
   integrity sha512-4vEbkSs83OahpmBybNJXlJd7d6/RxzkkSdT3I0mnGt79Xd2Kk+e1JqbvAvsQfCeKj3aKb0QIWkyK3/n0j506vQ==
