@@ -92,6 +92,8 @@ export class SiteManagerIPFS implements SiteManagerInterface {
 
         // TODO: Verify whether the 1420 is the origin in all requests
         const corsAllowOriginArgs = [
+            "--repo-dir",
+            this.storageRepoPath, 
             "config",
             "--json",
             "API.HTTPHeaders.Access-Control-Allow-Origin",
@@ -102,6 +104,8 @@ export class SiteManagerIPFS implements SiteManagerInterface {
         console.log(Date.now(), " setup allowed origin done");
 
         const corsAllowMethodsArgs = [
+            "--repo-dir",
+            this.storageRepoPath, 
             "config",
             "--json",
             "API.HTTPHeaders.Access-Control-Allow-Methods",
