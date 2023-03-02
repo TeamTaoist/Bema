@@ -1,7 +1,8 @@
 import { exists, createDir, removeDir, readTextFile, writeTextFile, writeBinaryFile, BaseDirectory } from '@tauri-apps/api/fs'
 
 import { resolve, join, basename, appDataDir } from '@tauri-apps/api/path';
-import { globSource, create } from 'ipfs-core';
+import { create, IPFSHTTPClient, globSource } from 'kubo-rpc-client'
+import { createDirIfNotExisting, execSidecarCmd } from '../utils'
 import { v4 as uuidv4 } from 'uuid';
 
 import {
@@ -15,6 +16,7 @@ import {
 import { SiteManagerInterface } from "./interface";
 import { fs } from '@tauri-apps/api';
 
+const IPFS_BINARY = 'binaries/ipfs';
 
 const DefaultSiteConfig: SiteManagerConfig = {
     storageBackend: StorageBackend.IPFS,
@@ -35,9 +37,11 @@ type AddDirectoryOptions = {
 
 export class SiteManagerIPFS implements SiteManagerInterface {
     config: SiteManagerConfig;
-    ipfsClient: any;
+    ipfsClient: IPFSHTTPClient;
 
     appDataDirPath: string;
+    storageRepoPath: string;
+    sitesBaseDir: string;
 
     // Mapping between site id and pubkey
     siteIdDataHashMapping: {};
@@ -49,38 +53,71 @@ export class SiteManagerIPFS implements SiteManagerInterface {
             this.config = DefaultSiteConfig
         }
 
-        console.log("merged config: ", this.config);
-
-        // Create data dir if not existing
-        if (!exists(this.config.dataDir, { dir: BaseDirectory.AppData, })) {
-            createDir(this.config.dataDir, { dir: BaseDirectory.AppData, recursive: true });
-        }
-
         this.siteIdDataHashMapping = {};
     }
 
     async init() {
+        this.appDataDirPath = await appDataDir();
+
+        this.storageRepoPath = await join(this.appDataDirPath, "ipfsrepo")
+        this.sitesBaseDir = await join(this.appDataDirPath, "sites")
+
+        this.config.dataDir = this.sitesBaseDir;
+        this.config.storageBaseDir = this.storageRepoPath;
+
+        console.log("config paths: ", this.config);
+
+        await createDirIfNotExisting(this.config.dataDir);
+        await createDirIfNotExisting(this.config.storageBaseDir);
+
+
+        // Inif IPFS node, which is a kubo binary started in sidecar mode
+        await this.initIpfsNode();
 
         // Connect to IPFS node
         await this.initIpfsClient();
 
         // TODO: Load existing sites
 
+        console.log(`init done, appDataDir: ${this.appDataDirPath}`);
+    }
 
-        this.appDataDirPath = await appDataDir();
+    // initIpfsNode starts an IPFS node in specified directory, then enable CORS for request with vita origin
+    async initIpfsNode() {
+        console.log("init ipfs repo...");
+        await execSidecarCmd(IPFS_BINARY, ["--repo-dir", this.config.storageBaseDir, "init"]);
+        console.log("init ipfs repo done");
 
-        console.log("init done")
+        // TODO: Verify whether the 1420 is the origin in all requests
+        const corsAllowOriginArgs = [
+            "config",
+            "--json",
+            "API.HTTPHeaders.Access-Control-Allow-Origin",
+            "[\"http://localhost:1420\", \"http://127.0.0.1:1420\"]",
+        ];
+        console.log("setup allowed origin...");
+        await execSidecarCmd(IPFS_BINARY, corsAllowOriginArgs);
+        console.log("setup allowed origin done");
+
+        const corsAllowMethodsArgs = [
+            "config",
+            "--json",
+            "API.HTTPHeaders.Access-Control-Allow-Methods",
+            "[\"PUT\", \"POST\", \"GET\"]",
+        ];
+        console.log("setup allowed methods...");
+        await execSidecarCmd(IPFS_BINARY, corsAllowMethodsArgs);
+        console.log("setup allowed methods done");
+
+        console.log("starting ipfs daemon...");
+        await execSidecarCmd(IPFS_BINARY, ["--repo-dir", this.config.storageBaseDir, "daemon"]);
     }
 
     async initIpfsClient() {
+        // TODO: Verify whether the node is available on 5001, and how to change it in cofiguration
         const createOptions = {
-            repo: this.config.storageBaseDir,
-            Addresses: {
-                API: '/ip4/127.0.0.1/tcp/5001',
-                Gateway: '/ip4/127.0.0.1/tcp/8080'
-            }
+            url: "http://127.0.0.1:5001/api/v0"
         };
-
         this.ipfsClient = await create(createOptions);
 
         let serverConfig = await this.ipfsClient.config.getAll();
