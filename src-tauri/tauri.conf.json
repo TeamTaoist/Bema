@@ -18,7 +18,8 @@
         "scope": [
           {
             "name": "binaries/ipfs",
-            "sidecar": true
+            "sidecar": true,
+            "args": true
           }
         ]
       },
@@ -27,7 +28,7 @@
         "scope": [
           "$APP/*",
           "$DESKTOP/*",
-          "$APPDATA/*/*"
+          "$APPDATA/*"
         ]
       },
       "path": {
