@@ -1,5 +1,4 @@
 import { exists, createDir, removeDir, readTextFile, writeTextFile, writeBinaryFile, BaseDirectory } from '@tauri-apps/api/fs'
-import { createFFmpeg, fetchFile } from '@ffmpeg/ffmpeg';
 
 import { resolve, join, basename, appDataDir } from '@tauri-apps/api/path';
 import { globSource, create } from 'ipfs-core';
@@ -24,9 +23,9 @@ const DefaultSiteConfig: SiteManagerConfig = {
     dataDir: "",
 };
 
-const ffmpeg = createFFmpeg({ log: true });
 
-const mediaEntryFileName = 'index.m3u8'
+// TODO: All ffmpeg related code will be implemented later
+// const mediaEntryFileName = 'index.m3u8'
 const metadataFileName = 'metadata.json'
 
 type AddDirectoryOptions = {
@@ -61,16 +60,12 @@ export class SiteManagerIPFS implements SiteManagerInterface {
     }
 
     async init() {
-        await ffmpeg.load();
 
         // Connect to IPFS node
         await this.initIpfsClient();
 
         // TODO: Load existing sites
 
-        // load ffmpeg
-        // Note: after loading ffmpeg, all error messages will be print by fferr and the real calltrace will be hidden
-        // await ffmpeg.load();
 
         this.appDataDirPath = await appDataDir();
 
@@ -233,34 +228,34 @@ export class SiteManagerIPFS implements SiteManagerInterface {
 
     // TODO: Move this function to separated media processing module
     async generateHlsContent(srcMediaPath: string, outputDir: string) {
-        // Save media file from src media path to ffmpeg.wasm FS.
-        // generate uuid for saving file under processing to avoid overriding
-        const baseDir = uuidv4();
-        const tmpFileName = await join(baseDir, await basename(srcMediaPath));
-        const wasmFsOutputPath = await join(baseDir, "output");
-        const indexPath = await join(wasmFsOutputPath, 'index.m3u8');
+        // // Save media file from src media path to ffmpeg.wasm FS.
+        // // generate uuid for saving file under processing to avoid overriding
+        // const baseDir = uuidv4();
+        // const tmpFileName = await join(baseDir, await basename(srcMediaPath));
+        // const wasmFsOutputPath = await join(baseDir, "output");
+        // const indexPath = await join(wasmFsOutputPath, 'index.m3u8');
 
-        ffmpeg.FS("mkdir", baseDir);
-        ffmpeg.FS("mkdir", wasmFsOutputPath);
-        ffmpeg.FS("writeFile", tmpFileName, await fetchFile(srcMediaPath));
-        await ffmpeg.run(
-            "-i",
-            tmpFileName,
-            "-hls_time",
-            '30',
-            '-hls_list_size',
-            '0',
-            indexPath,
-        );
+        // ffmpeg.FS("mkdir", baseDir);
+        // ffmpeg.FS("mkdir", wasmFsOutputPath);
+        // ffmpeg.FS("writeFile", tmpFileName, await fetchFile(srcMediaPath));
+        // await ffmpeg.run(
+        //     "-i",
+        //     tmpFileName,
+        //     "-hls_time",
+        //     '30',
+        //     '-hls_list_size',
+        //     '0',
+        //     indexPath,
+        // );
 
-        console.log(`Try to getting data form ${wasmFsOutputPath}`);
-        for (const f of ffmpeg.FS('readdir', wasmFsOutputPath)) {
-            if (f === '.' || f === '..') {
-                continue;
-            }
-            console.log(`file info: ${f}`)
-            writeBinaryFile(await join(outputDir, f), ffmpeg.FS('readFile', await join(wasmFsOutputPath, f)));
-        }
+        // console.log(`Try to getting data form ${wasmFsOutputPath}`);
+        // for (const f of ffmpeg.FS('readdir', wasmFsOutputPath)) {
+        //     if (f === '.' || f === '..') {
+        //         continue;
+        //     }
+        //     console.log(`file info: ${f}`)
+        //     writeBinaryFile(await join(outputDir, f), ffmpeg.FS('readFile', await join(wasmFsOutputPath, f)));
+        // }
     }
 
     ////////////////////////////////////////////////
