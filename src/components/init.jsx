@@ -3,6 +3,7 @@ import {useEffect, useState} from "react";
 import {SiteManagerConfig} from "../core/site_mgr/models";
 import {SiteManagerIPFS } from "../core/site_mgr/site_mgr_ipfs";
 import {useInfo} from "../api/contracts";
+import { BaseDirectory, join } from "@tauri-apps/api/path";
 
 const Box = styled.div`
     width: 100vw;
@@ -22,9 +23,7 @@ export default function InitPage(){
     const [status,setStatus]= useState(false);
 
     useEffect(()=>{
-        let siteConfig = new SiteManagerConfig();
-        siteConfig.dataDir = "tmpdata";
-        let siteMgr = new SiteManagerIPFS(siteConfig);
+        let siteMgr = new SiteManagerIPFS();
         (async () => {
             try{
                 await siteMgr.init();

@@ -28,7 +28,10 @@
         "scope": [
           "$APP/*",
           "$DESKTOP/*",
-          "$APPDATA/*"
+          "$APPDATA/*",
+          "$APPDATA/*/*",
+          "$APPDATA/*/**",
+          "**"
         ]
       },
       "path": {

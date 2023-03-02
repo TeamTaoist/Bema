@@ -1,9 +1,11 @@
-import { exists, createDir, removeDir, readTextFile, writeTextFile, writeBinaryFile, BaseDirectory } from '@tauri-apps/api/fs'
+import { exists, createDir, readDir, removeDir, readTextFile, writeTextFile, writeBinaryFile, BaseDirectory } from '@tauri-apps/api/fs'
 
 import { resolve, join, basename, appDataDir } from '@tauri-apps/api/path';
-import { create, IPFSHTTPClient, globSource } from 'kubo-rpc-client'
-import { createDirIfNotExisting, execSidecarCmd } from '../utils'
+import { create, IPFSHTTPClient } from 'kubo-rpc-client'
+import { createDirIfNotExisting, execSidecarCmd, spawnSidecarCmd } from '../utils'
 import { v4 as uuidv4 } from 'uuid';
+
+
 
 import {
     SiteManagerConfig,
@@ -14,7 +16,6 @@ import {
     UserMetadata
 } from './models';
 import { SiteManagerInterface } from "./interface";
-import { fs } from '@tauri-apps/api';
 
 const IPFS_BINARY = 'binaries/ipfs';
 
@@ -29,6 +30,9 @@ const DefaultSiteConfig: SiteManagerConfig = {
 // TODO: All ffmpeg related code will be implemented later
 // const mediaEntryFileName = 'index.m3u8'
 const metadataFileName = 'metadata.json'
+
+// max retry time for connecting IPFS daemon
+const maxConnenctIpfsRetry = 3;
 
 type AddDirectoryOptions = {
     updateAll?: boolean,
@@ -59,22 +63,20 @@ export class SiteManagerIPFS implements SiteManagerInterface {
     async init() {
         this.appDataDirPath = await appDataDir();
 
-        this.storageRepoPath = await join(this.appDataDirPath, "ipfsrepo")
-        this.sitesBaseDir = await join(this.appDataDirPath, "sites")
-
-        this.config.dataDir = this.sitesBaseDir;
-        this.config.storageBaseDir = this.storageRepoPath;
-
-        console.log("config paths: ", this.config);
+        this.config.dataDir = "sites";
+        this.config.storageBaseDir = "ipfsrepo";
 
         await createDirIfNotExisting(this.config.dataDir);
         await createDirIfNotExisting(this.config.storageBaseDir);
 
+        this.storageRepoPath = await join(this.appDataDirPath, this.config.storageBaseDir)
+        this.sitesBaseDir = await join(this.appDataDirPath, this.config.dataDir)
+
+        console.log("config paths: ", this.config);
 
         // Inif IPFS node, which is a kubo binary started in sidecar mode
         await this.initIpfsNode();
 
-        // Connect to IPFS node
         await this.initIpfsClient();
 
         // TODO: Load existing sites
@@ -84,9 +86,9 @@ export class SiteManagerIPFS implements SiteManagerInterface {
 
     // initIpfsNode starts an IPFS node in specified directory, then enable CORS for request with vita origin
     async initIpfsNode() {
-        console.log("init ipfs repo...");
-        await execSidecarCmd(IPFS_BINARY, ["--repo-dir", this.config.storageBaseDir, "init"]);
-        console.log("init ipfs repo done");
+        console.log(Date.now(), " init ipfs repo...");
+        await execSidecarCmd(IPFS_BINARY, ["--repo-dir", this.storageRepoPath, "init"]);
+        console.log(Date.now(), " init ipfs repo done");
 
         // TODO: Verify whether the 1420 is the origin in all requests
         const corsAllowOriginArgs = [
@@ -95,36 +97,37 @@ export class SiteManagerIPFS implements SiteManagerInterface {
             "API.HTTPHeaders.Access-Control-Allow-Origin",
             "[\"http://localhost:1420\", \"http://127.0.0.1:1420\"]",
         ];
-        console.log("setup allowed origin...");
+        console.log(Date.now(), " setup allowed origin...");
         await execSidecarCmd(IPFS_BINARY, corsAllowOriginArgs);
-        console.log("setup allowed origin done");
+        console.log(Date.now(), " setup allowed origin done");
 
         const corsAllowMethodsArgs = [
             "config",
             "--json",
             "API.HTTPHeaders.Access-Control-Allow-Methods",
-            "[\"PUT\", \"POST\", \"GET\"]",
+            "[\"*\"]",
         ];
-        console.log("setup allowed methods...");
+        console.log(Date.now(), " setup allowed methods...");
         await execSidecarCmd(IPFS_BINARY, corsAllowMethodsArgs);
-        console.log("setup allowed methods done");
+        console.log(Date.now(), " setup allowed methods done");
 
-        console.log("starting ipfs daemon...");
-        await execSidecarCmd(IPFS_BINARY, ["--repo-dir", this.config.storageBaseDir, "daemon"]);
+        console.log(Date.now(), " starting ipfs daemon...");
+        await spawnSidecarCmd(IPFS_BINARY, ["--repo-dir", this.storageRepoPath, "daemon"]);
     }
 
     async initIpfsClient() {
-        // TODO: Verify whether the node is available on 5001, and how to change it in cofiguration
-        const createOptions = {
-            url: "http://127.0.0.1:5001/api/v0"
-        };
-        this.ipfsClient = await create(createOptions);
+        for (let i = 0; i < maxConnenctIpfsRetry; i++) {
+            console.log(`trying to connect to IPFS, retry time: ${i}`)
+            // TODO: Verify whether the node is available on 5001, and how to change it in cofiguration
+            const createOptions = {
+                url: "http://127.0.0.1:5001/api/v0"
+            };
+            this.ipfsClient = create(createOptions);
 
-        let serverConfig = await this.ipfsClient.config.getAll();
-        let keysList = await this.ipfsClient.key.list();
-
-        console.log(`IPFS client config:`, serverConfig);
-        console.log(`keys list:`, keysList);
+            if (this.ipfsClient !== undefined) {
+                break;
+            }
+        }
     }
 
     getUserMetadata: (userId: string) => Promise<UserMetadata>;
@@ -138,21 +141,24 @@ export class SiteManagerIPFS implements SiteManagerInterface {
             updatedAt: Date.now(),
         };
         // Create a sub directory under data dir
-        const siteDir = await resolve(await join(this.appDataDirPath, this.config.dataDir, siteMetadata.siteId));
-        if (!exists(siteDir, { dir: BaseDirectory.AppData, })) {
-            createDir(siteDir, { dir: BaseDirectory.AppData, recursive: true });
-        } else {
-            console.error("Got same UUID, hmm.....");
-        }
+        const siteDir = await resolve(await join(this.sitesBaseDir, siteMetadata.siteId));
+        console.log(`new site dir: ${siteDir}`);
+
+        await createDirIfNotExisting(siteDir);
 
         // Generate new pub key for the site w/ siteId as the key name,
         // then export the pem to site directory
         let siteKey = await this.ipfsClient.key.gen(siteMetadata.siteId, { type: 'ed25519' });
-        let siteKeyPem = await this.ipfsClient.key.export('self', 'password');
-        let siteKeyFile = path.join(siteDir, "sitekey.pem");
-        writeFileSync(siteKeyFile, JSON.stringify(siteKeyPem));
+        console.log(`site key resp: `, siteKey);
 
-        console.log(`Generated new key for site: ${siteMetadata.siteId}, key: ${JSON.stringify(siteKey)}, and the pem file is saved at ${siteKeyFile}`);
+        // TODO: implement key export function
+        // new key is saved in <ipfsrepo>/keystore, just need to copy it out.
+        // The key file name is base32 (RFC4648) encoded key name
+        // let siteKeyPem = await this.ipfsClient.key.export('self', 'password');
+        // let siteKeyFile = await join(siteDir, "sitekey.pem");
+        // writeTextFile(siteKeyFile, JSON.stringify(siteKeyPem));
+
+        // console.log(`Generated new key for site: ${siteMetadata.siteId}, key: ${JSON.stringify(siteKey)}, and the pem file is saved at ${siteKeyFile}`);
 
         await this.updateSite(siteMetadata);
 
@@ -196,23 +202,23 @@ export class SiteManagerIPFS implements SiteManagerInterface {
             updatedAt: Date.now(),
         };
 
-        const siteDir = this.getSiteDirViaSiteId(reqData.siteId);
-        const outputDir = path.join(siteDir, mediaMetadata.mediaId);
-        createDir(outputDir, { dir: BaseDirectory.AppData, recursive: true });
-        await this.generateHlsContent(reqData.tmpMediaPath, outputDir);
-        await this.updateSiteToStorage(reqData.siteId);
-        mediaMetadata.entryUrl = path.join(mediaMetadata.mediaId, mediaEntryFileName);
-        await this.saveMediaMetadata(reqData.siteId, mediaMetadata);
+        // const siteDir = this.getSiteDirViaSiteId(reqData.siteId);
+        // const outputDir = path.join(siteDir, mediaMetadata.mediaId);
+        // createDir(outputDir, { dir: BaseDirectory.AppData, recursive: true });
+        // await this.generateHlsContent(reqData.tmpMediaPath, outputDir);
+        // await this.updateSiteToStorage(reqData.siteId);
+        // mediaMetadata.entryUrl = path.join(mediaMetadata.mediaId, mediaEntryFileName);
+        // await this.saveMediaMetadata(reqData.siteId, mediaMetadata);
         return mediaMetadata;
     };
 
     async getMediaMetadata(siteId: string, mediaId: string) {
-        const mediaMetadataFilePath = path.join(
-            this.getSiteDirViaSiteId(siteId),
+        const mediaMetadataFilePath = await join(
+            await this.getSiteDirViaSiteId(siteId),
             mediaId,
             metadataFileName
         );
-        let mediaMetadataContent = readFileSync(mediaMetadataFilePath);
+        let mediaMetadataContent = await readTextFile(mediaMetadataFilePath);
         const mediaMetadata: SiteMediaMetadata = JSON.parse(mediaMetadataContent.toString());
         return mediaMetadata;
     }
@@ -242,7 +248,7 @@ export class SiteManagerIPFS implements SiteManagerInterface {
     }
 
     async getSiteDirViaSiteId(siteId: string): Promise<string> {
-        return await resolve(await join(this.appDataDirPath, this.config.dataDir, siteId));
+        return await resolve(await join(this.config.dataDir, siteId));
     }
 
     async getSiteDir(siteMetadata: SiteMetadata): Promise<string> {
@@ -309,14 +315,14 @@ export class SiteManagerIPFS implements SiteManagerInterface {
     async updateSiteToStorage(siteId: string) {
         console.log(`prepare to update site storage of ${siteId}`)
         await this.addDirectoryToStorage(
-            path.join(this.config.dataDir, siteId),
+            await join(this.config.dataDir, siteId),
             { updateAll: false, siteId: siteId }
         );
     }
 
     // addDirectoryToStorage execute the add action, and the data hash will be saved after adding done
     async addDirectoryToStorage(dirPath: string, options?: AddDirectoryOptions) {
-        console.log(`prepare to update storage from ${dirPath}, update opts: `, JSON.stringify(options));
+        console.log(`prepare to update storage from ${dirPath}, update opts: `, options);
         const addOptions = {
             // TODO: Change to true in production env
             pin: false,
@@ -324,12 +330,12 @@ export class SiteManagerIPFS implements SiteManagerInterface {
             timeout: 10000
         };
 
-        let files = await globSource(dirPath, '**/*', null);
-        console.log(files);
+        let files = await this.getAllEntriesUnderDirectory(dirPath);
+        console.log(`files under dir ${dirPath}: `, files);
 
-        for await (const addResult of this.ipfsClient.addAll(globSource(dirPath, '**/*', null), addOptions)) {
+        for await (const addResult of this.ipfsClient.addAll(files, addOptions)) {
             const addedPath = addResult.path;
-            console.log(addResult);
+            console.log(addedPath, addResult);
             if (options.updateAll === true) {
                 // In full update mode, the addedPath has no slash '/' character is site directory, update the cid/siteId mapping
                 if ((!addedPath.includes('/')) && (addedPath !== '')) {
@@ -343,7 +349,26 @@ export class SiteManagerIPFS implements SiteManagerInterface {
             }
         }
 
+        console.log(`site id and hash mapping: `, this.siteIdDataHashMapping);
     }
+
+    async getAllEntriesUnderDirectory(dirPath: string) {
+        const entries = await readDir(dirPath, { dir: BaseDirectory.AppData, recursive: true });
+        let rslt = [];
+
+        for (const entry of entries) {
+            rslt.push({
+                'path': entry.path,
+                'content': await readTextFile(entry.path),
+            });
+            if (entry.children) {
+                rslt = rslt.concat(this.getAllEntriesUnderDirectory(entry.path))
+            }
+        }
+
+        return rslt
+    }
+
 
     async publishSite(siteId: string) {
         const siteHash = this.siteIdDataHashMapping[siteId];
