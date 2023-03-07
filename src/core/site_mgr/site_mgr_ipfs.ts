@@ -18,6 +18,7 @@ import {
 import { SiteManagerInterface } from "./interface";
 
 const IPFS_BINARY = 'binaries/ipfs';
+const IPFS_PROXY_BINARY = 'binaries/ipfs_proxy';
 
 const DefaultSiteConfig: SiteManagerConfig = {
     storageBackend: StorageBackend.IPFS,
@@ -74,6 +75,8 @@ export class SiteManagerIPFS implements SiteManagerInterface {
 
         console.log("config paths: ", this.config);
 
+        await spawnSidecarCmd(IPFS_PROXY_BINARY, []);
+
         // Inif IPFS node, which is a kubo binary started in sidecar mode
         await this.initIpfsNode();
 
@@ -93,7 +96,7 @@ export class SiteManagerIPFS implements SiteManagerInterface {
         // TODO: Verify whether the 1420 is the origin in all requests
         const corsAllowOriginArgs = [
             "--repo-dir",
-            this.storageRepoPath, 
+            this.storageRepoPath,
             "config",
             "--json",
             "API.HTTPHeaders.Access-Control-Allow-Origin",
@@ -105,7 +108,7 @@ export class SiteManagerIPFS implements SiteManagerInterface {
 
         const corsAllowMethodsArgs = [
             "--repo-dir",
-            this.storageRepoPath, 
+            this.storageRepoPath,
             "config",
             "--json",
             "API.HTTPHeaders.Access-Control-Allow-Methods",
@@ -124,7 +127,7 @@ export class SiteManagerIPFS implements SiteManagerInterface {
             console.log(`trying to connect to IPFS, retry time: ${i}`)
             // TODO: Verify whether the node is available on 5001, and how to change it in cofiguration
             const createOptions = {
-                url: "http://127.0.0.1:5001/api/v0"
+                url: "http://127.0.0.1:12345/api/v0"
             };
             this.ipfsClient = create(createOptions);
 
@@ -136,7 +139,7 @@ export class SiteManagerIPFS implements SiteManagerInterface {
 
     getUserMetadata: (userId: string) => Promise<UserMetadata>;
 
-    async createSite(siteName: string, description: string) {
+    async createSite(siteName: string, description: string): Promise<SiteMetadata> {
         const siteMetadata: SiteMetadata = {
             siteId: uuidv4(),
             name: siteName,
@@ -252,7 +255,7 @@ export class SiteManagerIPFS implements SiteManagerInterface {
     }
 
     async getSiteDirViaSiteId(siteId: string): Promise<string> {
-        return await resolve(await join(this.config.dataDir, siteId));
+        return await resolve(await join(this.sitesBaseDir, siteId));
     }
 
     async getSiteDir(siteMetadata: SiteMetadata): Promise<string> {
