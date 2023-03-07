@@ -13,9 +13,22 @@
   "tauri": {
     "allowlist": {
       "all": false,
+      "http": {
+        "all": true,
+        "request": true,
+        "scope": [
+          "http://localhost:5001/*",
+          "http://127.0.0.1:5001/*"
+        ]
+      },
       "shell": {
         "sidecar": true,
         "scope": [
+          {
+            "name": "binaries/ipfs_proxy",
+            "sidecar": true,
+            "args": true
+          },
           {
             "name": "binaries/ipfs",
             "sidecar": true,
@@ -46,7 +59,8 @@
         "depends": []
       },
       "externalBin": [
-        "binaries/ipfs"
+        "binaries/ipfs",
+        "binaries/ipfs_proxy"
       ],
       "icon": [
         "icons/32x32.png",
