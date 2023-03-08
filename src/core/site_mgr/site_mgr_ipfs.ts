@@ -337,7 +337,7 @@ export class SiteManagerIPFS implements SiteManagerInterface {
     // updateSiteToStorage update specified site to IPFS storage.
     async updateSiteToStorage(siteId: string) {
         console.log(`prepare to update site storage of ${siteId}`)
-        await this.addDirectoryToStorage(siteId, { updateAll: false, siteId: siteId });
+        await this.addDirectoryToStorage(await join(this.sitesBaseDir, siteId), { updateAll: false, siteId: siteId });
     }
 
     // addDirectoryToStorage execute the add action, and the data hash will be saved after adding done
