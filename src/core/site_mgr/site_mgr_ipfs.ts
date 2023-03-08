@@ -139,6 +139,22 @@ export class SiteManagerIPFS implements SiteManagerInterface {
 
     getUserMetadata: (userId: string) => Promise<UserMetadata>;
 
+    async listSites(): Promise<SiteMetadata[]> {
+        const entries = await readDir(this.sitesBaseDir, { dir: BaseDirectory.AppData, recursive: true });
+        var rslt = []
+
+        for (const entry of entries) {
+            const relativePath = entry.path.replace(this.sitesBaseDir, '');
+            if (entry.children) {
+                rslt.push(JSON.parse(await readTextFile(await join(entry.path, metadataFileName))));
+            } else {
+                // TODO: There should not a single file under sitesBaseDir, think about raise error
+            }
+        }
+
+        return rslt;
+    }
+
     async createSite(siteName: string, description: string): Promise<SiteMetadata> {
         const siteMetadata: SiteMetadata = {
             siteId: uuidv4(),
