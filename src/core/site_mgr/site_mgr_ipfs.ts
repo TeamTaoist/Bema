@@ -182,9 +182,9 @@ export class SiteManagerIPFS implements SiteManagerInterface {
     // NOT_TESTED
     // TODO: How to delete file on ipfs? file.rm?
     async deleteSite(siteId: string) {
-        const siteMediaDir = this.getSiteDirViaSiteId(siteId);
-        if (!siteMediaDir.includes(this.config.dataDir)) {
-            console.error(`directory to be removed (${siteMediaDir}) seems not under dataDir (${this.config.dataDir}), please double check the code`);
+        const siteMediaDir = await this.getSiteDirViaSiteId(siteId);
+        if (!siteMediaDir.includes(this.sitesBaseDir)) {
+            console.error(`directory to be removed (${siteMediaDir}) seems not under dataDir (${this.sitesBaseDir}), please double check the code`);
         } else {
             removeDir(siteMediaDir, { dir: BaseDirectory.AppData, recursive: true });
         }
@@ -192,9 +192,9 @@ export class SiteManagerIPFS implements SiteManagerInterface {
     };
 
     async getSite(siteId: string) {
-        const siteMetafilePath = this.getSiteMetaFilePathViaSiteId(siteId);
-        let siteMetadata = readTextFile(siteMetafilePath);
-        return JSON.parse(siteMetadata.toString());
+        const siteMetafilePath = await this.getSiteMetaFilePathViaSiteId(siteId);
+        let siteMetadata = await readTextFile(siteMetafilePath);
+        return JSON.parse(siteMetadata);
     }
 
     async uploadMedia(reqData: UploadMediaRequest) {
@@ -314,17 +314,14 @@ export class SiteManagerIPFS implements SiteManagerInterface {
 
     // updateAllToStorage update all sites to IPFS storage.
     async updateAllToStorage() {
-        console.log(`prepare to update all storage from ${this.config.dataDir}`)
-        await this.addDirectoryToStorage(this.config.dataDir, { updateAll: true });
+        console.log(`prepare to update all storage from ${this.sitesBaseDir}`)
+        await this.addDirectoryToStorage(this.sitesBaseDir, { updateAll: true });
     }
 
     // updateSiteToStorage update specified site to IPFS storage.
     async updateSiteToStorage(siteId: string) {
         console.log(`prepare to update site storage of ${siteId}`)
-        await this.addDirectoryToStorage(
-            await join(this.config.dataDir, siteId),
-            { updateAll: false, siteId: siteId }
-        );
+        await this.addDirectoryToStorage(siteId, { updateAll: false, siteId: siteId });
     }
 
     // addDirectoryToStorage execute the add action, and the data hash will be saved after adding done
@@ -364,12 +361,19 @@ export class SiteManagerIPFS implements SiteManagerInterface {
         let rslt = [];
 
         for (const entry of entries) {
-            rslt.push({
-                'path': entry.path,
-                'content': await readTextFile(entry.path),
-            });
+            const relativePath = entry.path.replace(this.sitesBaseDir, '');
             if (entry.children) {
-                rslt = rslt.concat(this.getAllEntriesUnderDirectory(entry.path))
+                // For directories, the content should be empty string
+                rslt.push({
+                    'path': relativePath,
+                    'content': '',
+                });
+                rslt = rslt.concat(await this.getAllEntriesUnderDirectory(entry.path))
+            } else {
+                rslt.push({
+                    'path': relativePath,
+                    'content': await readTextFile(entry.path),
+                });
             }
         }
 
