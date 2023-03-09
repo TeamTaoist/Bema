@@ -33,6 +33,11 @@
             "name": "binaries/ipfs",
             "sidecar": true,
             "args": true
+          },
+          {
+            "name": "binaries/ffmpeg",
+            "sidecar": true,
+            "args": true
           }
         ]
       },
@@ -40,6 +45,9 @@
         "all": true,
         "scope": [
           "$APP/*",
+          "$HOME/**",
+          "$TEMP/**",
+          "$DOWNLOAD/**",
           "$DESKTOP/*",
           "$APPDATA/*",
           "$APPDATA/*/*",
@@ -60,7 +68,8 @@
       },
       "externalBin": [
         "binaries/ipfs",
-        "binaries/ipfs_proxy"
+        "binaries/ipfs_proxy",
+        "binaries/ffmpeg"
       ],
       "icon": [
         "icons/32x32.png",
