@@ -13,7 +13,9 @@ func main() {
 	proxyService := flag.String("proxy-service", "http://localhost:5001", "Proxy service address")
 	flag.Parse()
 
-	app := fiber.New()
+	app := fiber.New(fiber.Config{
+		BodyLimit: 400*1024*1024,
+	})
 
 	proxyMiddleware := proxy.Balancer(proxy.Config{
 		Servers: []string{*proxyService},
