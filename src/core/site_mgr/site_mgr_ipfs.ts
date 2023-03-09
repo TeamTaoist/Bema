@@ -1,4 +1,4 @@
-import { exists, createDir, readDir, removeDir, readTextFile, writeTextFile, writeBinaryFile, BaseDirectory } from '@tauri-apps/api/fs'
+import { exists, createDir, readDir, removeDir, readTextFile, writeTextFile, writeBinaryFile, BaseDirectory, readBinaryFile } from '@tauri-apps/api/fs'
 
 import { resolve, join, basename, appDataDir } from '@tauri-apps/api/path';
 import { create, IPFSHTTPClient } from 'kubo-rpc-client'
@@ -19,6 +19,7 @@ import { SiteManagerInterface } from "./interface";
 
 const IPFS_BINARY = 'binaries/ipfs';
 const IPFS_PROXY_BINARY = 'binaries/ipfs_proxy';
+const FFMPEG_BINARY = 'binaries/ffmpeg';
 
 const DefaultSiteConfig: SiteManagerConfig = {
     storageBackend: StorageBackend.IPFS,
@@ -28,8 +29,7 @@ const DefaultSiteConfig: SiteManagerConfig = {
 };
 
 
-// TODO: All ffmpeg related code will be implemented later
-// const mediaEntryFileName = 'index.m3u8'
+const mediaEntryFileName = 'index.m3u8'
 const metadataFileName = 'metadata.json'
 
 // max retry time for connecting IPFS daemon
@@ -191,8 +191,11 @@ export class SiteManagerIPFS implements SiteManagerInterface {
     }
 
     async updateSite(siteMetadata: SiteMetadata) {
+        console.log("save site metadata: ", siteMetadata);
         await this.saveSiteMetadata(siteMetadata, true);
+        console.log("update site to storage");
         await this.updateSiteToStorage(siteMetadata.siteId);
+        console.log("update done");
     };
 
     // NOT_TESTED
@@ -225,13 +228,16 @@ export class SiteManagerIPFS implements SiteManagerInterface {
             updatedAt: Date.now(),
         };
 
-        // const siteDir = this.getSiteDirViaSiteId(reqData.siteId);
-        // const outputDir = path.join(siteDir, mediaMetadata.mediaId);
-        // createDir(outputDir, { dir: BaseDirectory.AppData, recursive: true });
-        // await this.generateHlsContent(reqData.tmpMediaPath, outputDir);
-        // await this.updateSiteToStorage(reqData.siteId);
-        // mediaMetadata.entryUrl = path.join(mediaMetadata.mediaId, mediaEntryFileName);
-        // await this.saveMediaMetadata(reqData.siteId, mediaMetadata);
+        const siteDir = await this.getSiteDirViaSiteId(reqData.siteId);
+        const outputDir = await join(siteDir, mediaMetadata.mediaId);
+        console.log("Prepare to create directory: ", outputDir);
+        createDir(outputDir, { dir: BaseDirectory.AppData, recursive: true });
+
+        const mediaPath = await join(this.appDataDirPath, reqData.tmpMediaPath);
+        await this.generateHlsContent(mediaPath, outputDir);
+        await this.updateSiteToStorage(reqData.siteId);
+        mediaMetadata.entryUrl = await join(reqData.siteId, mediaMetadata.mediaId, mediaEntryFileName);
+        await writeTextFile(await join(this.sitesBaseDir, mediaMetadata.entryUrl), JSON.stringify(mediaMetadata))
         return mediaMetadata;
     };
 
@@ -294,34 +300,20 @@ export class SiteManagerIPFS implements SiteManagerInterface {
 
     // TODO: Move this function to separated media processing module
     async generateHlsContent(srcMediaPath: string, outputDir: string) {
-        // // Save media file from src media path to ffmpeg.wasm FS.
-        // // generate uuid for saving file under processing to avoid overriding
-        // const baseDir = uuidv4();
-        // const tmpFileName = await join(baseDir, await basename(srcMediaPath));
-        // const wasmFsOutputPath = await join(baseDir, "output");
-        // const indexPath = await join(wasmFsOutputPath, 'index.m3u8');
+        const indexPath = await join(outputDir, mediaEntryFileName);
+        console.log(this.appDataDirPath)
+        const ffmpegParams = [
+            "-i",
+            srcMediaPath,
+            "-hls_time",
+            '30',
+            '-hls_list_size',
+            '0',
+            indexPath,
+        ];
+        console.log(ffmpegParams);
 
-        // ffmpeg.FS("mkdir", baseDir);
-        // ffmpeg.FS("mkdir", wasmFsOutputPath);
-        // ffmpeg.FS("writeFile", tmpFileName, await fetchFile(srcMediaPath));
-        // await ffmpeg.run(
-        //     "-i",
-        //     tmpFileName,
-        //     "-hls_time",
-        //     '30',
-        //     '-hls_list_size',
-        //     '0',
-        //     indexPath,
-        // );
-
-        // console.log(`Try to getting data form ${wasmFsOutputPath}`);
-        // for (const f of ffmpeg.FS('readdir', wasmFsOutputPath)) {
-        //     if (f === '.' || f === '..') {
-        //         continue;
-        //     }
-        //     console.log(`file info: ${f}`)
-        //     writeBinaryFile(await join(outputDir, f), ffmpeg.FS('readFile', await join(wasmFsOutputPath, f)));
-        // }
+        await execSidecarCmd(FFMPEG_BINARY, ffmpegParams)
     }
 
     ////////////////////////////////////////////////
@@ -350,6 +342,8 @@ export class SiteManagerIPFS implements SiteManagerInterface {
             timeout: 10000
         };
 
+        console.log("add opts: ", addOptions);
+        console.log("dirpath: ", dirPath);
         let files = await this.getAllEntriesUnderDirectory(dirPath);
         console.log(`files under dir ${dirPath}: `, files);
 
@@ -388,11 +382,12 @@ export class SiteManagerIPFS implements SiteManagerInterface {
             } else {
                 rslt.push({
                     'path': relativePath,
-                    'content': await readTextFile(entry.path),
+                    'content': await readBinaryFile(entry.path),
                 });
             }
         }
 
+        console.log("rslt: ", rslt);
         return rslt
     }
 
