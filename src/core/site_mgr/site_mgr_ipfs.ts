@@ -146,7 +146,7 @@ export class SiteManagerIPFS implements SiteManagerInterface {
         for (const entry of entries) {
             const relativePath = entry.path.replace(this.sitesBaseDir, '');
             if (entry.children) {
-                rslt.push(JSON.parse(await readTextFile(await join(entry.path, metadataFileName))));
+                rslt.push(await this.getSite(entry.name));
             } else {
                 // TODO: There should not a single file under sitesBaseDir, think about raise error
             }
