@@ -8,6 +8,7 @@ import RhtBox from "../rhtBox";
 import AddImg from "../../assets/images/icon_add.svg";
 // import LogoImg from "../../assets/images/logo.png";
 import Loading from "../loading";
+import {useInfo} from "../../api/contracts";
 // import SuccessImg from "../../assets/images/success.png";
 
 const Box = styled.div`
@@ -202,21 +203,29 @@ const SuccessInner = styled.div`
 
 export default function Layout(props){
     const navigate = useNavigate();
+    const {state} = useInfo();
+    const { siteApi } = state;
     const [show,setShow] = useState(false);
-    const [self,setSelf] = useState([{
-        name:"first Bema",
-        id:"dsf",
-        metaFileId:"metaFileId"
-
-    }]);
+    const [self,setSelf] = useState([]);
     const [subscribed,setSubscribed] = useState([{
         name:"first Follow",
         id:"12345",
-        metaFileId:"metaFileId"
+        // metaFileId:"metaFileId"
 
     }]);
     const [showLoading,setLoading] = useState(false);
     const [showSuccess,setShowSuccess] = useState(false);
+
+    useEffect(()=>{
+        if(!siteApi)return;
+        GetMySites()
+
+    },[siteApi])
+
+    const GetMySites = async() =>{
+        const sites = await siteApi.listSites();
+        setSelf(sites)
+    }
 
     const handleHome = () =>{
         navigate("/")
@@ -271,9 +280,9 @@ export default function Layout(props){
                 <Sider>
                     Following
                 </Sider>
-                {
-                    subscribed.map((item,index)=>(<RhtBox id={`subscribed_${index}`} item={item} key={`subscribed_${index}`}/>))
-                }
+                {/*{*/}
+                {/*    subscribed.map((item,index)=>(<RhtBox id={`subscribed_${index}`} item={item} key={`subscribed_${index}`}/>))*/}
+                {/*}*/}
             </SiderBox>
 
             <ButtonAnimate>
