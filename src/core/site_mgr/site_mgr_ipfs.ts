@@ -236,8 +236,10 @@ export class SiteManagerIPFS implements SiteManagerInterface {
         const mediaPath = await join(this.appDataDirPath, reqData.tmpMediaPath);
         await this.generateHlsContent(mediaPath, outputDir);
         await this.updateSiteToStorage(reqData.siteId);
-        mediaMetadata.entryUrl = await join(reqData.siteId, mediaMetadata.mediaId, mediaEntryFileName);
-        await writeTextFile(await join(this.sitesBaseDir, mediaMetadata.entryUrl), JSON.stringify(mediaMetadata))
+        mediaMetadata.entryUrl = await join(outputDir, mediaEntryFileName);
+        const mediaMetadataPath = await join(outputDir, metadataFileName);
+        console.log(`media metadata file path: `, mediaMetadataPath);
+        await writeTextFile(mediaMetadataPath, JSON.stringify(mediaMetadata))
         return mediaMetadata;
     };
 
