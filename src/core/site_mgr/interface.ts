@@ -11,7 +11,7 @@ export interface SiteManagerInterface {
     createSite: (siteName: string, description: string) => Promise<SiteMetadata>;
     updateSite: (siteConfig: SiteMetadata) => Promise<void>;
     deleteSite: (siteId: string) => Promise<void>;
-    getSite: (siteId: string) => Promise<SiteMediaMetadata>;
+    getSite: (siteId: string) => Promise<SiteMetadata>;
 
     // Media related
     uploadMedia: (reqData: UploadMediaRequest) => Promise<SiteMediaMetadata>;
