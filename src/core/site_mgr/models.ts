@@ -1,3 +1,9 @@
+import { exists, writeTextFile, readTextFile } from "@tauri-apps/api/fs"
+import { join } from "@tauri-apps/api/path"
+import { v4 as uuidv4 } from 'uuid';
+
+export const metadataFileName = 'metadata.json';
+
 export enum StorageBackend {
     IPFS = 0,
 }
@@ -25,12 +31,44 @@ export class UserMetadata {
 }
 
 export class SiteMetadata {
-    siteId: string
-    name: string
-    description: string
+    siteId: string;
+    name: string;
+    description: string;
+    medias?: Record<string, SiteMediaMetadata>;
 
-    createdAt: number
-    updatedAt: number
+    createdAt: number;
+    updatedAt: number;
+
+    constructor(name: string, description: string) {
+        this.siteId = uuidv4();
+        this.name = name;
+        this.description = description;
+        this.createdAt = Date.now();
+        this.updatedAt = Date.now();
+    }
+
+    upinsertMedia(mediaMetadata: SiteMediaMetadata) {
+        if (this.medias === undefined) {
+            this.medias = {};
+        }
+        this.medias[mediaMetadata.mediaId] = mediaMetadata;
+    };
+
+    async saveToDisk(siteDir: string, override: boolean) {
+        const filePath = await join(siteDir, metadataFileName)
+        if (override || !exists(filePath)) {
+            await writeTextFile(filePath, JSON.stringify(this));
+        } else {
+            console.error("site metadata file existing and override option is false");
+        }
+    }
+}
+
+export async function loadSiteMetadataFile(filePath: string): Promise<SiteMetadata> {
+    const content = await readTextFile(filePath);
+    const foobar = Object.assign(new SiteMetadata("", ""), JSON.parse(content) as SiteMetadata);
+    console.log(foobar);
+    return foobar;
 }
 
 export class SiteMediaMetadata {

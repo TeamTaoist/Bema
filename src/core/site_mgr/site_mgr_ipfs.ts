@@ -13,7 +13,9 @@ import {
     SiteMetadata,
     StorageBackend,
     UploadMediaRequest,
-    UserMetadata
+    UserMetadata,
+    metadataFileName,
+    loadSiteMetadataFile
 } from './models';
 import { SiteManagerInterface } from "./interface";
 
@@ -30,7 +32,6 @@ const DefaultSiteConfig: SiteManagerConfig = {
 
 
 const mediaEntryFileName = 'index.m3u8'
-const metadataFileName = 'metadata.json'
 
 // max retry time for connecting IPFS daemon
 const maxConnenctIpfsRetry = 3;
@@ -156,13 +157,7 @@ export class SiteManagerIPFS implements SiteManagerInterface {
     }
 
     async createSite(siteName: string, description: string): Promise<SiteMetadata> {
-        const siteMetadata: SiteMetadata = {
-            siteId: uuidv4(),
-            name: siteName,
-            description: description,
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
-        };
+        const siteMetadata = new SiteMetadata(siteName, description);
         // Create a sub directory under data dir
         const siteDir = await resolve(await join(this.sitesBaseDir, siteMetadata.siteId));
         console.log(`new site dir: ${siteDir}`);
@@ -212,8 +207,7 @@ export class SiteManagerIPFS implements SiteManagerInterface {
 
     async getSite(siteId: string) {
         const siteMetafilePath = await this.getSiteMetaFilePathViaSiteId(siteId);
-        let siteMetadata = await readTextFile(siteMetafilePath);
-        return JSON.parse(siteMetadata);
+        return await loadSiteMetadataFile(siteMetafilePath);
     }
 
     async uploadMedia(reqData: UploadMediaRequest) {
@@ -229,6 +223,7 @@ export class SiteManagerIPFS implements SiteManagerInterface {
         };
 
         const siteDir = await this.getSiteDirViaSiteId(reqData.siteId);
+        console.log("site dir: ", siteDir);
         const outputDir = await join(siteDir, mediaMetadata.mediaId);
         console.log("Prepare to create directory: ", outputDir);
         createDir(outputDir, { dir: BaseDirectory.AppData, recursive: true });
@@ -236,10 +231,15 @@ export class SiteManagerIPFS implements SiteManagerInterface {
         const mediaPath = await join(this.appDataDirPath, reqData.tmpMediaPath);
         await this.generateHlsContent(mediaPath, outputDir);
         await this.updateSiteToStorage(reqData.siteId);
-        mediaMetadata.entryUrl = await join(outputDir, mediaEntryFileName);
+        mediaMetadata.entryUrl = await join(mediaMetadata.mediaId, mediaEntryFileName);
         const mediaMetadataPath = await join(outputDir, metadataFileName);
         console.log(`media metadata file path: `, mediaMetadataPath);
         await writeTextFile(mediaMetadataPath, JSON.stringify(mediaMetadata))
+
+        const siteMetadata: SiteMetadata = await this.getSite(reqData.siteId) as SiteMetadata;
+        siteMetadata.upinsertMedia(mediaMetadata);
+        await siteMetadata.saveToDisk(siteDir, true);
+
         return mediaMetadata;
     };
 
@@ -250,7 +250,7 @@ export class SiteManagerIPFS implements SiteManagerInterface {
             metadataFileName
         );
         let mediaMetadataContent = await readTextFile(mediaMetadataFilePath);
-        const mediaMetadata: SiteMediaMetadata = JSON.parse(mediaMetadataContent.toString());
+        const mediaMetadata: SiteMediaMetadata = JSON.parse(mediaMetadataContent.toString()) as SiteMediaMetadata;
         return mediaMetadata;
     }
 
@@ -263,19 +263,8 @@ export class SiteManagerIPFS implements SiteManagerInterface {
     ////////////////////////////////////////////////
 
     async saveSiteMetadata(siteMetadata: SiteMetadata, override: boolean) {
-        const siteMetadataFilePath = await this.getSiteMetaFilePath(siteMetadata);
-
-        if (!exists(siteMetadataFilePath, { dir: BaseDirectory.AppData, })) {
-            console.log(`save site metadata to ${siteMetadataFilePath}`);
-            writeTextFile(siteMetadataFilePath, JSON.stringify(siteMetadata));
-        } else {
-            if (override) {
-                console.log(`overrite site metadata file ${siteMetadataFilePath}`);
-                writeTextFile(siteMetadataFilePath, JSON.stringify(siteMetadata));
-            } else {
-                console.error("site metadata file existing and override option is false");
-            }
-        }
+        const siteBaseDir = await this.getSiteDir(siteMetadata);
+        await siteMetadata.saveToDisk(siteBaseDir, override);
     }
 
     async getSiteDirViaSiteId(siteId: string): Promise<string> {
