@@ -1,4 +1,4 @@
-import { exists, createDir, readDir, removeDir, readTextFile, writeTextFile, writeBinaryFile, BaseDirectory, readBinaryFile } from '@tauri-apps/api/fs'
+import { copyFile, createDir, readDir, removeDir, readTextFile, writeTextFile, BaseDirectory, readBinaryFile } from '@tauri-apps/api/fs'
 
 import { resolve, join, basename, appDataDir } from '@tauri-apps/api/path';
 import { create, IPFSHTTPClient } from 'kubo-rpc-client'
@@ -216,6 +216,9 @@ export class SiteManagerIPFS implements SiteManagerInterface {
             title: reqData.title,
             description: reqData.description,
             tags: reqData.tags,
+
+            // cover and entryUrl will be set later
+            cover: "",
             entryUrl: "",
 
             createdAt: Date.now(),
@@ -224,12 +227,36 @@ export class SiteManagerIPFS implements SiteManagerInterface {
 
         const siteDir = await this.getSiteDirViaSiteId(reqData.siteId);
         console.log("site dir: ", siteDir);
+
+        // outputDir saves media processed to segments and entry file
         const outputDir = await join(siteDir, mediaMetadata.mediaId);
         console.log("Prepare to create directory: ", outputDir);
         createDir(outputDir, { dir: BaseDirectory.AppData, recursive: true });
 
-        const mediaPath = await join(this.appDataDirPath, reqData.tmpMediaPath);
+        // Copy cover image to mediaDir
+        console.log('reqData: ', reqData)
+        const coverBasename = await basename(reqData.cover);
+        const mediaCoverPath = await join(outputDir, coverBasename)
+        await copyFile(reqData.cover, mediaCoverPath, { dir: BaseDirectory.AppData });
+        mediaMetadata.cover = await join(mediaMetadata.mediaId, coverBasename);
+
+        // mediaPath is the abs path for uploaded media,
+        // if given path is absolute path (starts with /), then the path will be directly passed to ffmpeg
+        // Or the path will be connected after AppDataDirPath
+        var mediaPath: string;
+        if (reqData.tmpMediaPath.startsWith('/')) {
+            mediaPath = reqData.tmpMediaPath;
+        } else {
+            mediaPath = await join(this.appDataDirPath, reqData.tmpMediaPath);
+        }
+
+        // Generate HLS segments of media
+        // TODO: need to remove original media?
         await this.generateHlsContent(mediaPath, outputDir);
+
+        // Copy cover image to media outputDir
+
+        // Update site to storage
         await this.updateSiteToStorage(reqData.siteId);
         mediaMetadata.entryUrl = await join(mediaMetadata.mediaId, mediaEntryFileName);
         const mediaMetadataPath = await join(outputDir, metadataFileName);

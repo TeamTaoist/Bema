@@ -74,6 +74,7 @@ export async function loadSiteMetadataFile(filePath: string): Promise<SiteMetada
 export class SiteMediaMetadata {
     mediaId: string
     title: string
+    cover: string
     description: string
     tags: [string]
     entryUrl: string
@@ -87,6 +88,7 @@ export class SiteMediaMetadata {
 export class UploadMediaRequest {
     siteId: string
     title: string
+    cover: string
     description: string
     tags: [string]
 
