@@ -5,6 +5,7 @@ import {useState} from "react";
 import CloseImg from "../assets/images/icon_close.svg";
 import UploadImg from "../assets/images/icon_upload.svg";
 import AddImg from "../assets/images/icon_add.svg";
+import {useInfo} from "../api/contracts";
 
 
 const Box = styled.div`
@@ -151,6 +152,8 @@ const FirstLine = styled.div`
 
 export default function New(props){
     const {handleClose,item} = props;
+    const {state} = useInfo();
+    const { siteApi } = state;
     // const {state} = useSubstrate();
     // const {info} = state;
     const [ title,setTitle] = useState('');
@@ -170,6 +173,14 @@ export default function New(props){
 
     }
     const handleSubmit = async () =>{
+        const mediaMetadata = await siteApi.uploadMedia({
+            siteId: item.siteId,
+            title,
+            description:about,
+            tmpMediaPath: file.name
+        })
+        handleClose();
+        console.log(mediaMetadata)
         // if(!info)return;
         // const infoP = JSON.parse(info)
         // const{ wallet:{address}} =infoP;
