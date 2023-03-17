@@ -5,6 +5,7 @@ import videojs from "video.js";
 import "video.js/dist/video-js.css";
 
 import VideoDemo from "../assets/images/testFiles/testVideo.mp4";
+import PublicJS from "../utils/public";
 
 const BgBox = styled.div`
   background: rgba(0, 0, 0, 0.2);
@@ -105,7 +106,7 @@ export default function VideoBox(props){
 
     const {handleClose,item} = props;
 
-
+    console.error(item.entryUrl)
     const play = {
         fill: true,
         fluid: true,
@@ -116,11 +117,12 @@ export default function VideoBox(props){
             {
                 // src: `${BASE_URL}/media/${userKey}/${item.entry_fid}`,
 
-                // src: `${BASE_URL}/media/${userKey}/${item.entry_fid}`,
-                // type: "application/x-mpegURL"
+                // src: `${BASE_URL}/media/${userKey}/${item.entryUrl}`,
+                src: `${item.entryUrl}`,
+                type: "application/x-mpegURL"
 
-                src: VideoDemo,
-                type: "video/mp4"
+                // src: VideoDemo,
+                // type: "video/mp4"
             }
         ]
     };
@@ -136,7 +138,7 @@ export default function VideoBox(props){
                     <div className="title">{item.title}</div>
                     <div className="info-section">
                         <label>Date &amp; Time</label>
-                        <span>{item.created_at}</span>
+                        <span>{PublicJS.dateFormat(item.createdAt)}</span>
                     </div>
                     <div className="desc">{item.description}
                     </div>

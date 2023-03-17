@@ -9,8 +9,9 @@ import AudioBox from "./components/AudioBox";
 import { useParams } from "react-router-dom";
 import Bg from "./components/bg";
 import DetailImg from "./assets/images/icon_detail.svg";
-
+// import TestSiteMgrPage from "./testSiteMgr";
 import DemoImg from "./assets/images/testFiles/testCover.png";
+import {useInfo} from "./api/contracts";
 
 const Box = styled.div`
     padding: 40px;
@@ -87,6 +88,8 @@ const NoItem = styled.div`
 
 
 export default function List(){
+    const {state} = useInfo();
+    const { siteApi } = state;
     const[show,setShow] = useState(false);
     const[showAudio,setShowAudio] = useState(false);
     const [showLoading,setLoading] = useState(false);
@@ -102,12 +105,34 @@ export default function List(){
     const {id} = useParams();
 
     useEffect(()=>{
-        if(!id || id ==='all'){
+        if(!id || id ==='all' || !siteApi){
             setLoading(false);
             return;
+        }else{
+            console.log(id)
+            getMyList()
         }
 
-    },[id])
+    },[id,siteApi])
+
+    const getMyList = async () =>{
+        const siteMetadata = await siteApi.getSite(id);
+        let arr = [];
+        for (let key in siteMetadata.medias){
+            arr.push(siteMetadata.medias[key])
+        }
+        console.error(arr[0])
+        if(arr.length>3){
+            let rs =  arr.slice(0,3);
+            setBList(rs);
+            let ls = arr.slice(-(arr.length-3));
+            setSList(ls);
+
+        }else{
+            setBList(arr)
+        }
+
+    }
 
 
     const handleVideo = (item,index,type) =>{
@@ -133,6 +158,7 @@ export default function List(){
     }
 
     return <Layout>
+        {/*<TestSiteMgrPage />*/}
         {
             showLoading &&<Loading />
         }

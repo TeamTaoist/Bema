@@ -149,8 +149,8 @@ export default function RhtBox(props){
         setShowNew(false)
     }
 
-    const toList = (id) =>{
-        navigate(`/list/${id}`)
+    const toList = (item) =>{
+        navigate(`/list/${item.siteId}`)
     }
 
     const removeSite = async (item) =>{
@@ -201,7 +201,7 @@ export default function RhtBox(props){
                             <img src={DetailImg} alt=""/>
                         </div>
                         <div className="folder-item__details">
-                            <div className="folder-item__details__name" onClick={()=>toList(item.id)}>
+                            <div className="folder-item__details__name" onClick={()=>toList(item)}>
                                 Detail
                             </div>
                         </div>

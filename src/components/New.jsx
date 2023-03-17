@@ -175,6 +175,7 @@ export default function New(props){
     const handleSubmit = async () =>{
         const mediaMetadata = await siteApi.uploadMedia({
             siteId: item.siteId,
+            cover:imgUrl,
             title,
             description:about,
             tmpMediaPath: file.name
@@ -223,10 +224,12 @@ export default function New(props){
     const updateLogo =async (e) =>{
         const { files } = e.target;
         let url = window.URL.createObjectURL(files[0]);
+        console.log(files[0])
         const base64Url =await getBase64(url);
         console.error(base64Url)
-        setImgUrl(url64)
+        setImgUrl(files[0].name)
     }
+
     const updatePDF = (e) =>{
         const { files } = e.target;
         const { name } = files[0];
