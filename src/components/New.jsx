@@ -154,7 +154,7 @@ const FirstLine = styled.div`
 
 export default function New(props) {
     const { handleClose, item,handleNewTips } = props;
-    const { state } = useInfo();
+    const { state,dispatch } = useInfo();
     const { siteApi } = state;
     // const {state} = useSubstrate();
     // const {info} = state;
@@ -185,6 +185,7 @@ export default function New(props) {
         })
         handleClose();
         handleNewTips("Added !");
+        dispatch({type:'REFRESH_LIST',payload:true})
         console.log(mediaMetadata)
         // if(!info)return;
         // const infoP = JSON.parse(info)
@@ -205,25 +206,25 @@ export default function New(props) {
     }
 
 
-    const getBase64 = (imgUrl) => {
-        window.URL = window.URL || window.webkitURL;
-        const xhr = new XMLHttpRequest();
-        xhr.open("get", imgUrl, true);
-        xhr.responseType = "blob";
-        xhr.onload = function () {
-            if (this.status == 200) {
-                const blob = this.response;
-                console.log("blob", blob)
-                let oFileReader = new FileReader();
-                oFileReader.onloadend = function (e) {
-                    console.log(e.target.result)
-                    setUrl64(e.target.result);
-                }
-                oFileReader.readAsDataURL(blob);
-            }
-        }
-        xhr.send();
-    }
+    // const getBase64 = (imgUrl) => {
+    //     window.URL = window.URL || window.webkitURL;
+    //     const xhr = new XMLHttpRequest();
+    //     xhr.open("get", imgUrl, true);
+    //     xhr.responseType = "blob";
+    //     xhr.onload = function () {
+    //         if (this.status == 200) {
+    //             const blob = this.response;
+    //             console.log("blob", blob)
+    //             let oFileReader = new FileReader();
+    //             oFileReader.onloadend = function (e) {
+    //                 console.log(e.target.result)
+    //                 setUrl64(e.target.result);
+    //             }
+    //             oFileReader.readAsDataURL(blob);
+    //         }
+    //     }
+    //     xhr.send();
+    // }
 
     const copyFileToAppDir = async (file) => {
         const appDataDirPath = await appDataDir();
@@ -236,6 +237,15 @@ export default function New(props) {
 
     const updateLogo = async (e) => {
         const { files } = e.target;
+        console.log(e.target.files)
+
+        let reader = new FileReader();
+        reader.readAsDataURL(files[0]);
+
+        reader.onload = function () {
+            let imgs = this.result
+            setUrl64(imgs);
+        }
         const logoPath = await copyFileToAppDir(files[0]);
         setImgUrl(logoPath)
     }

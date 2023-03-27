@@ -136,7 +136,7 @@ const ButtonAnimate = styled.div`
     background: #f00;
     border-radius: 10px;
     transition: 0.5s;
-    transition-delay: 0.5;
+    transition-delay: 0.5s;
   }
 
   .btn:hover::before /*lightup button*/ {
@@ -157,7 +157,7 @@ const ButtonAnimate = styled.div`
     background: #f00;
     border-radius: 10px;
     transition: 0.5s;
-    transition-delay: 0.5;
+    transition-delay: 0.5s;
   }
 
   .btn:hover::after{
@@ -199,8 +199,10 @@ export default function Layout(props){
     },[siteApi])
 
     const GetMySites = async() =>{
+        setLoading(true);
         const sites = await siteApi.listSites();
         setSelf(sites)
+        setLoading(false);
     }
 
     const handleHome = () =>{

@@ -162,7 +162,6 @@ export default function RhtBox(props){
 
     const removeSite = async () =>{
        let res = await siteApi.deleteSite(delItem.siteId);
-       console.error(res)
         setShowConfirm(false);
         handleNewTips("Deleted !")
     }

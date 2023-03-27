@@ -2,6 +2,8 @@ const reducer = (state, action) => {
     switch (action.type) {
         case 'SET_SITEMGR':
             return { ...state, siteApi: action.payload };
+        case 'REFRESH_LIST':
+            return { ...state, refreshList: action.payload };
 
         // //accounts
         // case 'LOAD_ALLACCOUNTS':

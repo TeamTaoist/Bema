@@ -88,8 +88,8 @@ const NoItem = styled.div`
 
 
 export default function List(){
-    const {state} = useInfo();
-    const { siteApi } = state;
+    const {state,dispatch} = useInfo();
+    const { siteApi,refreshList } = state;
     const[show,setShow] = useState(false);
     const[showAudio,setShowAudio] = useState(false);
     const [showLoading,setLoading] = useState(false);
@@ -114,6 +114,11 @@ export default function List(){
         }
 
     },[id,siteApi])
+    useEffect(()=>{
+        if(!refreshList)return;
+        getMyList();
+        dispatch({type:'REFRESH_LIST',payload:null})
+    },[refreshList])
 
     const getMyList = async () =>{
         const siteMetadata = await siteApi.getSite(id);
@@ -121,7 +126,6 @@ export default function List(){
         for (let key in siteMetadata.medias){
             arr.push(siteMetadata.medias[key])
         }
-        console.error(arr[0])
         if(arr.length>3){
             let rs =  arr.slice(0,3);
             setBList(rs);
