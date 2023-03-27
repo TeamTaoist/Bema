@@ -6,7 +6,7 @@ import {useEffect, useState} from "react";
 import Modal from "../Modal";
 import RhtBox from "../rhtBox";
 import AddImg from "../../assets/images/icon_add.svg";
-// import LogoImg from "../../assets/images/logo.png";
+import LogoImg from "../../assets/images/logo2.png";
 import Loading from "../loading";
 import {useInfo} from "../../api/contracts";
 // import SuccessImg from "../../assets/images/success.png";
@@ -268,8 +268,8 @@ export default function Layout(props){
 
         <Lft >
             <Logo onClick={()=>handleHome()}>
-                BEMA
-                {/*<img src={LogoImg} alt=""/>*/}
+                {/*BEMA*/}
+                <img src={LogoImg} alt=""/>
             </Logo>
             <SiderBox>
                 <Sider> I created</Sider>
