@@ -17,6 +17,8 @@ import New from "./New";
 import {useNavigate} from "react-router-dom";
 import CloseImg from "../assets/images/remove.svg";
 import {useInfo} from "../api/contracts";
+import Reminder from "./reminder";
+import Toast from "./Toast";
 
 
 const Box = styled.div`
@@ -38,12 +40,17 @@ const CopiedBox = styled.div`
 export default function RhtBox(props){
     const {state} = useInfo();
     const { siteApi } = state;
-    const {id,item} = props;
+    const {id,item,refresh} = props;
     const [show, setShow] = useState(false);
     const [showEdit,setShowEdit] = useState(false);
     const [showNew,setShowNew] = useState(false);
+    const [showConfirm,setShowConfirm] = useState(false);
+    const [showSuccess,setShowSuccess] = useState(false);
+    const [tips,setTips] = useState("");
+
     const navigate = useNavigate();
     const [current,setCurrent] = useState();
+    const [delItem,setDelItem] = useState();
 
     const arrayWithColors = [
         "#16a085",
@@ -153,19 +160,47 @@ export default function RhtBox(props){
         navigate(`/list/${item.siteId}`)
     }
 
-    const removeSite = async (item) =>{
-       let res = await siteApi.deleteSite(item.siteId);
+    const removeSite = async () =>{
+       let res = await siteApi.deleteSite(delItem.siteId);
        console.error(res)
+        setShowConfirm(false);
+        handleNewTips("Deleted !")
+    }
+
+    const closeReminder = () =>{
+        setShowConfirm(false);
+    }
+
+    const handleReminder = (item) =>{
+        setShowConfirm(true);
+        setDelItem(item);
     }
 
 
+    const handleNewTips = (str) =>{
+        setTips(str);
+        setShowSuccess(true);
+        setTimeout(()=>{
+            setShowSuccess(false);
+            refresh();
+        },2000)
+    }
+
     return <Box>
+
+        {
+            showSuccess && <Toast tips={tips} />
+        }
         {
             showEdit && <Edit handleClose={handleCloseEdit}/>
         }
         {
-            showNew && <New handleClose={handleCloseNew} item={current}/>
+            showNew && <New handleClose={handleCloseNew} item={current} handleNewTips={handleNewTips}/>
         }
+        {
+            showConfirm &&<Reminder handleClose={closeReminder} removeSite={removeSite}/>
+        }
+
         <div className="cardBox">
             <div className="folder" id={`js_folder_${id}`}>
                 <div className="folder-summary" id={id}>
@@ -256,7 +291,7 @@ export default function RhtBox(props){
                             <img src={CloseImg} alt=""/>
                         </div>
                         <div className="folder-item__details">
-                            <div className="folder-item__details__name" onClick={()=>removeSite(item)}>
+                            <div className="folder-item__details__name" onClick={()=>handleReminder(item)}>
                                Remove site
                             </div>
                         </div>

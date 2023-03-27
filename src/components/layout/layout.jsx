@@ -9,6 +9,7 @@ import AddImg from "../../assets/images/icon_add.svg";
 import LogoImg from "../../assets/images/logo2.png";
 import Loading from "../loading";
 import {useInfo} from "../../api/contracts";
+import Toast from "../Toast";
 // import SuccessImg from "../../assets/images/success.png";
 
 const Box = styled.div`
@@ -174,32 +175,7 @@ const ButtonAnimate = styled.div`
   }
 
 `
-const SuccessBox = styled.div`
-  width: 100vw;
-  height: 100vh;
-  position: fixed;
-  left: 0;
-  top: 0;
-  z-index: 99;
-  background: rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(12px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`
 
-const SuccessInner = styled.div`
-  background: rgba(0, 0, 0, 0.6);
-  padding: 40px;
-  border-radius: 10px;
-  .top{
-    text-align: center;
-    margin-bottom: 20px;
-    img{
-      width: 50px;
-    }
-  } 
-`
 
 export default function Layout(props){
     const navigate = useNavigate();
@@ -239,9 +215,10 @@ export default function Layout(props){
     }
 
     const handleSuccess = () =>{
-        setShowSuccess(true)
+        setShowSuccess(true);
         setTimeout(()=>{
-            setShowSuccess(false)
+            setShowSuccess(false);
+            GetMySites();
         },2000)
     }
 
@@ -250,17 +227,7 @@ export default function Layout(props){
             showLoading &&<Loading />
         }
         {
-            showSuccess &&<SuccessBox>
-                <SuccessInner>
-                    <div className="top">
-                        {/*<img src={SuccessImg} alt=""/>*/}
-                    </div>
-                    <div>
-                        Add Success !
-                    </div>
-                </SuccessInner>
-
-            </SuccessBox>
+            showSuccess && <Toast tips="Add Success !"/>
         }
         {
             show &&<Modal handleClose={handleClose} handleSuccess={handleSuccess} />
@@ -274,7 +241,7 @@ export default function Layout(props){
             <SiderBox>
                 <Sider> I created</Sider>
                 {
-                    self.map((item,index)=>(<RhtBox id={`self_${index}`} item={item} key={`self_${index}`}/>))
+                    self.map((item,index)=>(<RhtBox id={`self_${index}`} item={item} key={`self_${index}`} refresh={GetMySites}/>))
                 }
 
                 <Sider>

@@ -153,7 +153,7 @@ const FirstLine = styled.div`
 `
 
 export default function New(props) {
-    const { handleClose, item } = props;
+    const { handleClose, item,handleNewTips } = props;
     const { state } = useInfo();
     const { siteApi } = state;
     // const {state} = useSubstrate();
@@ -184,6 +184,7 @@ export default function New(props) {
             tmpMediaPath: mediaPath
         })
         handleClose();
+        handleNewTips("Added !");
         console.log(mediaMetadata)
         // if(!info)return;
         // const infoP = JSON.parse(info)
