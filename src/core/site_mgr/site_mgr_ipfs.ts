@@ -22,6 +22,7 @@ import { SiteManagerInterface } from "./interface";
 const IPFS_BINARY = 'binaries/ipfs';
 const IPFS_PROXY_BINARY = 'binaries/ipfs_proxy';
 const FFMPEG_BINARY = 'binaries/ffmpeg';
+const IPFS_PROXY_SRV_ADDR = "http://127.0.0.1:12345"
 
 const DefaultSiteConfig: SiteManagerConfig = {
     storageBackend: StorageBackend.IPFS,
@@ -76,7 +77,10 @@ export class SiteManagerIPFS implements SiteManagerInterface {
 
         console.log("config paths: ", this.config);
 
-        await spawnSidecarCmd(IPFS_PROXY_BINARY, []);
+        await spawnSidecarCmd(IPFS_PROXY_BINARY, [
+            "--sites-base",
+            this.appDataDirPath,
+        ]);
 
         // Inif IPFS node, which is a kubo binary started in sidecar mode
         await this.initIpfsNode();
@@ -128,7 +132,7 @@ export class SiteManagerIPFS implements SiteManagerInterface {
             console.log(`trying to connect to IPFS, retry time: ${i}`)
             // TODO: Verify whether the node is available on 5001, and how to change it in cofiguration
             const createOptions = {
-                url: "http://127.0.0.1:12345/api/v0"
+                url: IPFS_PROXY_SRV_ADDR + "/api/v0"
             };
             this.ipfsClient = create(createOptions);
 
@@ -419,5 +423,13 @@ export class SiteManagerIPFS implements SiteManagerInterface {
         } else {
             console.error(`site ${siteId} has no dataHash saved, upload it to IPFS first`);
         }
+    }
+
+    getMediaCover(siteId: string, mediaMetadata: SiteMediaMetadata): string {
+        return `${IPFS_PROXY_SRV_ADDR}/${siteId}/${mediaMetadata.cover}`;
+    }
+
+    getMediaEntryUrl(siteId: string, mediaMetadata: SiteMediaMetadata): string {
+        return `${IPFS_PROXY_SRV_ADDR}/${siteId}/${mediaMetadata.entryUrl}`;
     }
 }
