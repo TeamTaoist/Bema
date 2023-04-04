@@ -35,6 +35,7 @@ export class SiteMetadata {
     name: string;
     description: string;
     medias?: Record<string, SiteMediaMetadata>;
+    sorted_media_ids?: Array<string> // Save medias id by insert order
 
     createdAt: number;
     updatedAt: number;
@@ -50,8 +51,10 @@ export class SiteMetadata {
     upinsertMedia(mediaMetadata: SiteMediaMetadata) {
         if (this.medias === undefined) {
             this.medias = {};
+            this.sorted_media_ids = [];
         }
         this.medias[mediaMetadata.mediaId] = mediaMetadata;
+        this.sorted_media_ids.push(mediaMetadata.mediaId);
     };
 
     async saveToDisk(siteDir: string, override: boolean) {
@@ -61,6 +64,22 @@ export class SiteMetadata {
         } else {
             console.error("site metadata file existing and override option is false");
         }
+    }
+
+    getPagedMedias(pageCnt: number, pageSize: number) {
+        const lIndex = pageSize * (pageCnt - 1);
+        if (pageCnt < 0 || lIndex > this.sorted_media_ids.length) {
+            return {}
+        }
+        const rIndex = pageSize * pageCnt;
+        const seletedMediaIds = this.sorted_media_ids.slice(lIndex, rIndex);
+
+        var rslt = {}
+        for (const mediaId of seletedMediaIds) {
+            rslt[mediaId] = this.medias[mediaId];
+        }
+
+        return rslt;
     }
 }
 
