@@ -1,5 +1,6 @@
 import React from "react";
 import styled from "styled-components";
+import PublicJS from "../utils/public";
 
 const Box = styled.div`
   transition: 300ms;
@@ -143,7 +144,7 @@ export default function Item(props){
 
     <div className="info-section">
      <label>Date &amp; Time</label>
-     <span>{item.created_at}</span>
+     <span>{PublicJS.dateFormat(item.createdAt)}</span>
     </div>
    </div>
   </div>

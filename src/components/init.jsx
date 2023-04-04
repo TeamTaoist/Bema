@@ -4,6 +4,7 @@ import {SiteManagerConfig} from "../core/site_mgr/models";
 import {SiteManagerIPFS } from "../core/site_mgr/site_mgr_ipfs";
 import {useInfo} from "../api/contracts";
 import { BaseDirectory, join } from "@tauri-apps/api/path";
+import Loading from "./loading";
 
 const Box = styled.div`
     width: 100vw;
@@ -40,5 +41,5 @@ export default function InitPage(){
     },[])
 
     if(status) return null;
-    return <Box>Init</Box>
+    return <Loading />
 }

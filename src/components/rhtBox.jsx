@@ -15,11 +15,20 @@ import { CopyToClipboard } from "react-copy-to-clipboard";
 import Edit from "./Edit";
 import New from "./New";
 import {useNavigate} from "react-router-dom";
+import CloseImg from "../assets/images/remove.svg";
+import {useInfo} from "../api/contracts";
+import Reminder from "./reminder";
+import Toast from "./Toast";
 
 
 const Box = styled.div`
     margin-bottom: 10px;
-
+.remove{
+  .folder-item__details__name{
+    color: #c0392b;
+  }
+ 
+}
 `
 
 const CopiedBox = styled.div`
@@ -29,12 +38,19 @@ const CopiedBox = styled.div`
 `
 
 export default function RhtBox(props){
-    const {id,item} = props;
+    const {state} = useInfo();
+    const { siteApi } = state;
+    const {id,item,refresh} = props;
     const [show, setShow] = useState(false);
     const [showEdit,setShowEdit] = useState(false);
     const [showNew,setShowNew] = useState(false);
+    const [showConfirm,setShowConfirm] = useState(false);
+    const [showSuccess,setShowSuccess] = useState(false);
+    const [tips,setTips] = useState("");
+
     const navigate = useNavigate();
     const [current,setCurrent] = useState();
+    const [delItem,setDelItem] = useState();
 
     const arrayWithColors = [
         "#16a085",
@@ -56,7 +72,7 @@ export default function RhtBox(props){
         showFolderContentAnimation
             .add({
                 targets: `#js_folder-content_${id}`,
-                height: [0, 190],
+                height: [0, 230],
                 duration: 350
             })
             .add(
@@ -140,17 +156,50 @@ export default function RhtBox(props){
         setShowNew(false)
     }
 
-    const toList = (id) =>{
-        navigate(`/list/${id}`)
+    const toList = (item) =>{
+        navigate(`/list/${item.siteId}`)
+    }
+
+    const removeSite = async () =>{
+       let res = await siteApi.deleteSite(delItem.siteId);
+        setShowConfirm(false);
+        handleNewTips("Deleted !")
+    }
+
+    const closeReminder = () =>{
+        setShowConfirm(false);
+    }
+
+    const handleReminder = (item) =>{
+        setShowConfirm(true);
+        setDelItem(item);
+    }
+
+
+    const handleNewTips = (str) =>{
+        setTips(str);
+        setShowSuccess(true);
+        setTimeout(()=>{
+            setShowSuccess(false);
+            refresh();
+        },2000)
     }
 
     return <Box>
+
+        {
+            showSuccess && <Toast tips={tips} />
+        }
         {
             showEdit && <Edit handleClose={handleCloseEdit}/>
         }
         {
-            showNew && <New handleClose={handleCloseNew} item={current}/>
+            showNew && <New handleClose={handleCloseNew} item={current} handleNewTips={handleNewTips}/>
         }
+        {
+            showConfirm &&<Reminder handleClose={closeReminder} removeSite={removeSite}/>
+        }
+
         <div className="cardBox">
             <div className="folder" id={`js_folder_${id}`}>
                 <div className="folder-summary" id={id}>
@@ -186,7 +235,7 @@ export default function RhtBox(props){
                             <img src={DetailImg} alt=""/>
                         </div>
                         <div className="folder-item__details">
-                            <div className="folder-item__details__name" onClick={()=>toList(item.id)}>
+                            <div className="folder-item__details__name" onClick={()=>toList(item)}>
                                 Detail
                             </div>
                         </div>
@@ -196,7 +245,7 @@ export default function RhtBox(props){
                                 <img src={ShareImg} alt=""/>
                         </div>
                         <div className="folder-item__details">
-                            <CopyToClipboard text={item.metaFileId} onCopy={handleCopy}>
+                            <CopyToClipboard text={item.siteId} onCopy={handleCopy}>
                                 <div className="folder-item__details__name">Share</div>
                             </CopyToClipboard>
                             {
@@ -206,16 +255,6 @@ export default function RhtBox(props){
                         </div>
                     </li>
 
-                    <li className={`folder-item js_folder-item_${id} js_folder-item`}>
-                        <div className="folder-item__icon">
-                            <img src={ExportImg} alt=""/>
-                        </div>
-                        <div className="folder-item__details">
-                            <div className="folder-item__details__name">
-                               Export
-                            </div>
-                        </div>
-                    </li>
                     <li className={`folder-item js_folder-item_${id} js_folder-item`}>
                         <div className="folder-item__icon">
                             <img src={EditImg} alt=""/>
@@ -233,6 +272,26 @@ export default function RhtBox(props){
                         <div className="folder-item__details">
                             <div className="folder-item__details__name" onClick={()=>handleNew(item)}>
                                New Media
+                            </div>
+                        </div>
+                    </li>
+                    <li className={`folder-item js_folder-item_${id} js_folder-item`}>
+                        <div className="folder-item__icon">
+                            <img src={ExportImg} alt=""/>
+                        </div>
+                        <div className="folder-item__details">
+                            <div className="folder-item__details__name">
+                                Export
+                            </div>
+                        </div>
+                    </li>
+                    <li className={`folder-item remove js_folder-item_${id} js_folder-item`}>
+                        <div className="folder-item__icon">
+                            <img src={CloseImg} alt=""/>
+                        </div>
+                        <div className="folder-item__details">
+                            <div className="folder-item__details__name" onClick={()=>handleReminder(item)}>
+                               Remove site
                             </div>
                         </div>
                     </li>

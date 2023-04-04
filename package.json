@@ -10,7 +10,8 @@
     "tauri": "tauri",
     "rename": "node rename.js",
     "tauriDev": "tauri dev",
-    "tauriBuild": "tauri build"
+    "tauriBuild": "tauri build --debug",
+    "tauriMacDev": "rm -rf target && tauri dev"
   },
   "dependencies": {
     "@ffmpeg/core": "^0.11.0",
