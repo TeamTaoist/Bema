@@ -48,6 +48,11 @@ export class SiteMetadata {
         this.updatedAt = Date.now();
     }
 
+    // Includes post tasks for loading data from JSON string
+    postTasksAfterJsonParse() {
+        this.sorted_media_ids = Object.keys(this.medias);
+    }
+
     upinsertMedia(mediaMetadata: SiteMediaMetadata) {
         if (this.medias === undefined) {
             this.medias = {};
@@ -68,6 +73,8 @@ export class SiteMetadata {
 
     getPagedMedias(pageCnt: number, pageSize: number) {
         const lIndex = pageSize * (pageCnt - 1);
+        console.log(this.sorted_media_ids);
+
         if (pageCnt < 0 || lIndex > this.sorted_media_ids.length) {
             return {}
         }
@@ -85,9 +92,10 @@ export class SiteMetadata {
 
 export async function loadSiteMetadataFile(filePath: string): Promise<SiteMetadata> {
     const content = await readTextFile(filePath);
-    const foobar = Object.assign(new SiteMetadata("", ""), JSON.parse(content) as SiteMetadata);
-    console.log(foobar);
-    return foobar;
+    const siteMetadata = Object.assign(new SiteMetadata("", ""), JSON.parse(content) as SiteMetadata);
+    siteMetadata.postTasksAfterJsonParse();
+    console.log(siteMetadata);
+    return siteMetadata;
 }
 
 export class SiteMediaMetadata {
