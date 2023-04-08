@@ -12,6 +12,7 @@ import DetailImg from "./assets/images/icon_detail.svg";
 // import TestSiteMgrPage from "./testSiteMgr";
 import DemoImg from "./assets/images/testFiles/testCover.png";
 import {useInfo} from "./api/contracts";
+import Page from "./components/pagination";
 
 const Box = styled.div`
     padding: 40px;
@@ -86,6 +87,10 @@ const NoItem = styled.div`
   }
 `
 
+const PageBox = styled.div`
+    margin:40px;
+`;
+
 
 export default function List(){
     const {state,dispatch} = useInfo();
@@ -101,6 +106,10 @@ export default function List(){
     }]);
     const [SList,setSList] = useState([]);
     const [current,setCurrent] = useState();
+
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+    const [total, setTotal] = useState(100);
 
     const {id} = useParams();
 
@@ -118,23 +127,38 @@ export default function List(){
         if(!refreshList)return;
         getMyList();
         dispatch({type:'REFRESH_LIST',payload:null})
-    },[refreshList])
+    },[refreshList]);
+
+    useEffect(()=>{
+        getMyList();
+    },[page])
 
     const getMyList = async () =>{
         const siteMetadata = await siteApi.getSite(id);
-        let arr = [];
-        for (let key in siteMetadata.medias){
-            arr.push(siteMetadata.medias[key])
-        }
-        if(arr.length>3){
-            let rs =  arr.slice(0,3);
-            setBList(rs);
-            let ls = arr.slice(-(arr.length-3));
-            setSList(ls);
+        const AllList = siteMetadata.getPagedMedias(page, pageSize);
 
-        }else{
-            setBList(arr)
+        const len = Object.keys(siteMetadata.medias).length;
+        setTotal(len)
+
+        let arr = [];
+
+        for (let key in AllList){
+            arr.push(AllList[key])
         }
+        if(page === 1) {
+            if(arr.length>3){
+                let rs =  arr.slice(0,3);
+                setBList(rs);
+                let ls = arr.slice(-(arr.length-3));
+                setSList(ls);
+            }else{
+                setBList(arr);
+                setSList([]);
+            }
+        }else{
+            setSList(arr);
+        }
+
 
     }
 
@@ -161,6 +185,15 @@ export default function List(){
         setShowAudio(false)
     }
 
+
+
+    const handlePage = (num) => {
+        setPage(num + 1);
+    };
+    const handlePageSize = (num) => {
+        setPageSize(num);
+    };
+
     return <Layout>
         {/*<TestSiteMgrPage />*/}
         {
@@ -168,7 +201,7 @@ export default function List(){
         }
 
         {
-            show&&<VideoBox handleClose={handleClose} item={current} />
+            show&&<VideoBox handleClose={handleClose} item={current} id={id} />
         }
         {
             showAudio&&<AudioBox handleClose={handleCloseAudio} item={current}/>
@@ -180,15 +213,15 @@ export default function List(){
             id !== 'all'&&BList.length>=1 &&<Box>
                 <Latest>
                     {
-                        BList.map((item,index)=>( <li key={index} onClick={()=>handleVideo(item,index,'blist')}>
-                            <Item item={item} height={260}/>
+                        !!BList.length && page===1 && BList.map((item,index)=>( <li key={index} onClick={()=>handleVideo(item,index,'blist')}>
+                            <Item item={item} height={260} id={id}/>
                         </li>))
                     }
                 </Latest>
                 <ListBox>
                     {
                         SList.map((item,index)=>( <li key={index} onClick={()=>handleVideo(item,index,'slist')}>
-                            <Item item={item} height={240} />
+                            <Item item={item} height={240} id={id} />
                         </li>))
                     }
                 </ListBox>
@@ -206,6 +239,9 @@ export default function List(){
 
             </Box>
         }
+        <PageBox>
+            <Page blackBg itemsPerPage={pageSize} total={total} current={page - 1} handleToPage={handlePage} handlePageSize={handlePageSize} />
+        </PageBox>
 
     </Layout>
 }

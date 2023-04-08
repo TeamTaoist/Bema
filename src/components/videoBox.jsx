@@ -103,10 +103,9 @@ const VideoPlugin = (props) => {
 
 export default function VideoBox(props){
 
-
+    const IPFS_PROXY_SRV_ADDR = "http://127.0.0.1:12345"
     const {handleClose,item} = props;
 
-    console.error(item.entryUrl)
     const play = {
         fill: true,
         fluid: true,
@@ -118,7 +117,7 @@ export default function VideoBox(props){
                 // src: `${BASE_URL}/media/${userKey}/${item.entry_fid}`,
 
                 // src: `${BASE_URL}/media/${userKey}/${item.entryUrl}`,
-                src: `${item.entryUrl}`,
+                src: `${IPFS_PROXY_SRV_ADDR}/${item.entryUrl}`,
                 type: "application/x-mpegURL"
 
                 // src: VideoDemo,

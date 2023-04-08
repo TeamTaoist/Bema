@@ -31,6 +31,7 @@
     "react-dom": "^18.2.0",
     "react-h5-audio-player": "^3.8.6",
     "react-lettered-avatar": "^1.0.2",
+    "react-paginate": "^8.1.5",
     "react-router-dom": "^6.7.0",
     "sass": "^1.57.1",
     "styled-components": "^5.3.6",
