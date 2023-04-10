@@ -256,7 +256,7 @@ export class SiteManagerIPFS implements SiteManagerInterface {
 
         // Generate HLS segments of media
         // TODO: need to remove original media?
-        await this.generateHlsContent(mediaPath, outputDir);
+        await this.generateHlsContent(mediaPath, outputDir, reqData.siteId, mediaMetadata.mediaId);
 
         // Copy cover image to media outputDir
 
@@ -321,7 +321,7 @@ export class SiteManagerIPFS implements SiteManagerInterface {
     ////////////////////////////////////////////////
 
     // TODO: Move this function to separated media processing module
-    async generateHlsContent(srcMediaPath: string, outputDir: string) {
+    async generateHlsContent(srcMediaPath: string, outputDir: string, siteId: string, mediaId: string) {
         const indexPath = await join(outputDir, mediaEntryFileName);
         console.log(this.appDataDirPath)
         const ffmpegParams = [
@@ -331,6 +331,8 @@ export class SiteManagerIPFS implements SiteManagerInterface {
             '30',
             '-hls_list_size',
             '0',
+            '-hls_base_url',
+            `/${siteId}/${mediaId}`,
             indexPath,
         ];
         console.log(ffmpegParams);
