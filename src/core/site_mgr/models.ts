@@ -93,6 +93,9 @@ export class SiteMetadata {
 export async function loadSiteMetadataFile(filePath: string): Promise<SiteMetadata> {
     const content = await readTextFile(filePath);
     const siteMetadata = Object.assign(new SiteMetadata("", ""), JSON.parse(content) as SiteMetadata);
+    if (siteMetadata.medias === undefined) {
+        siteMetadata.medias = {};
+    }
     siteMetadata.postTasksAfterJsonParse();
     console.log(siteMetadata);
     return siteMetadata;
@@ -117,7 +120,7 @@ export class UploadMediaRequest {
     title: string
     cover: string
     description: string
-    tags: [string]
+    tags?: [string]
 
     // tmpMediaPath saves temp path for media after uploaded by user
     tmpMediaPath: string
