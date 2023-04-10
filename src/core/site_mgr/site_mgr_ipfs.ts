@@ -332,7 +332,7 @@ export class SiteManagerIPFS implements SiteManagerInterface {
             '-hls_list_size',
             '0',
             '-hls_base_url',
-            `/${siteId}/${mediaId}`,
+            `/${siteId}/${mediaId}/`,
             indexPath,
         ];
         console.log(ffmpegParams);
