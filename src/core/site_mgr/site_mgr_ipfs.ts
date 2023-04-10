@@ -79,7 +79,7 @@ export class SiteManagerIPFS implements SiteManagerInterface {
 
         await spawnSidecarCmd(IPFS_PROXY_BINARY, [
             "--sites-base",
-            this.appDataDirPath,
+            this.sitesBaseDir,
         ]);
 
         // Inif IPFS node, which is a kubo binary started in sidecar mode
