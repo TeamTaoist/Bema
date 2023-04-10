@@ -6,7 +6,7 @@ import CloseImg from "../assets/images/icon_close.svg";
 import UploadImg from "../assets/images/icon_upload.svg";
 import AddImg from "../assets/images/icon_add.svg";
 import { useInfo } from "../api/contracts";
-import { writeBinaryFile, createDir, BaseDirectory } from "@tauri-apps/api/fs";
+import { writeBinaryFile, createDir, BaseDirectory, readBinaryFile } from "@tauri-apps/api/fs";
 import { appDataDir, join } from "@tauri-apps/api/path";
 
 
@@ -226,12 +226,34 @@ export default function New(props) {
     //     xhr.send();
     // }
 
+    const asyncReadFileContent = async (file) => {
+        const reader = new FileReader();
+
+        return new Promise((resolve, reject) => {
+            reader.onerror = () => {
+                reader.abort();
+                reject("read input file error");
+            };
+
+            reader.onload = () => {
+                resolve(reader.result);
+            };
+
+            reader.readAsArrayBuffer(file);
+        });
+
+    };
+
     const copyFileToAppDir = async (file) => {
         const appDataDirPath = await appDataDir();
         const uploadDir = await join(appDataDirPath, "uploads");
         await createDir("uploads", {dir: BaseDirectory.AppData, recursive: true});
+
         const path = await join(uploadDir, file.name);
-        await writeBinaryFile(path, file);
+        const buffer = await asyncReadFileContent(file);
+        const content = new Uint8Array(buffer);
+
+        await writeBinaryFile(path, content, {dir: BaseDirectory.AppData})
         return path;
     }
 
