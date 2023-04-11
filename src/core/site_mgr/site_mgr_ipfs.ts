@@ -224,6 +224,7 @@ export class SiteManagerIPFS implements SiteManagerInterface {
             // cover and entryUrl will be set later
             cover: "",
             entryUrl: "",
+            rawMediaUrl: "",
 
             createdAt: Date.now(),
             updatedAt: Date.now(),
@@ -253,16 +254,19 @@ export class SiteManagerIPFS implements SiteManagerInterface {
         } else {
             mediaPath = await join(this.appDataDirPath, reqData.tmpMediaPath);
         }
-
         // Generate HLS segments of media
         // TODO: need to remove original media?
         await this.generateHlsContent(mediaPath, outputDir, reqData.siteId, mediaMetadata.mediaId);
 
-        // Copy cover image to media outputDir
+        // Copy raw media to media directory to support browser not support HLS
+        const mediaFileName = await basename(mediaPath);
+        const mediaPathSavedToMediaDir = await join(siteDir, mediaMetadata.mediaId, mediaFileName);
+        await copyFile(mediaPath, mediaPathSavedToMediaDir, { dir: BaseDirectory.AppData });
 
         // Update site to storage
         await this.updateSiteToStorage(reqData.siteId);
         mediaMetadata.entryUrl = await join(mediaMetadata.mediaId, mediaEntryFileName);
+        mediaMetadata.rawMediaUrl = await join(mediaMetadata.mediaId, mediaFileName);
         const mediaMetadataPath = await join(outputDir, metadataFileName);
         console.log(`media metadata file path: `, mediaMetadataPath);
         await writeTextFile(mediaMetadataPath, JSON.stringify(mediaMetadata))

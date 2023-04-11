@@ -108,6 +108,7 @@ export class SiteMediaMetadata {
     description: string
     tags: [string]
     entryUrl: string
+    rawMediaUrl: string
 
     createdAt: number
     updatedAt: number
