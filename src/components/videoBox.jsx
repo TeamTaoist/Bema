@@ -96,7 +96,7 @@ const VideoPlugin = (props) => {
 
     return (
         <VideoBoxBg data-vjs-player>
-            <video ref={videoNode} className="video-js" />
+            <video ref={videoNode} className="video-js" id="video" />
         </VideoBoxBg>
     );
 };
@@ -105,7 +105,11 @@ export default function VideoBox(props){
 
     const IPFS_PROXY_SRV_ADDR = "http://127.0.0.1:12345"
     const {handleClose,item,id} = props;
-    console.error("==========",`${IPFS_PROXY_SRV_ADDR}/${id}/${item.entryUrl}`)
+
+    const supportsHLS = ()=> {
+        var video = document.createElement('video');
+        return Boolean(video.canPlayType('application/vnd.apple.mpegURL') || video.canPlayType('audio/mpegurl'))
+    }
 
     const play = {
         fill: true,
@@ -118,7 +122,7 @@ export default function VideoBox(props){
                 // src: `${BASE_URL}/media/${userKey}/${item.entry_fid}`,
 
                 // src: `${BASE_URL}/media/${userKey}/${item.entryUrl}`,
-                src: `${IPFS_PROXY_SRV_ADDR}/${id}/${item.entryUrl}`,
+                src: supportsHLS()?`${IPFS_PROXY_SRV_ADDR}/${id}/${item.entryUrl}`:`${IPFS_PROXY_SRV_ADDR}/${id}/${item.rawMediaUrl}`,
                 type: "application/x-mpegURL"
 
                 // src: VideoDemo,
