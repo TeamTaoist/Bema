@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/proxy"
 )
 
@@ -38,7 +39,11 @@ func main() {
 		},
 	})
 
-	app.Use(proxyMiddleware).Static("/", *siteBase, fiber.Static{
+	corsConfig := cors.Config{
+		AllowOrigins: *allowOrigins,
+	}
+
+	app.Use(cors.New(corsConfig)).Use(proxyMiddleware).Static("/", *siteBase, fiber.Static{
 		Compress:      true,
 		ByteRange:     true,
 		Browse:        true,
@@ -46,19 +51,6 @@ func main() {
 		CacheDuration: 10 * time.Second,
 		MaxAge:        3600,
 	})
-
-	//corsConfig := cors.Config{
-	//	AllowOrigins: *allowOrigins,
-	//}
-	//
-	//app.Use(cors.New(corsConfig))
-	//
-	//app.Use("/", func(c *fiber.Ctx) {
-
-	//
-	//	// Call the proxy middleware
-	//	proxyMiddleware(c)
-	//})
 
 	app.Listen(*listenAddr)
 }
