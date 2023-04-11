@@ -173,6 +173,20 @@ export class SiteManagerIPFS implements SiteManagerInterface {
         let siteKey = await this.ipfsClient.key.gen(siteMetadata.siteId, { type: 'ed25519' });
         console.log(`site key resp: `, siteKey);
 
+        // Backup site key
+        const siteKeyPath = await join(siteDir, "sitekey.pem");
+        console.log(Date.now(), " prepare to backup site key to ", siteKeyPath);
+        await execSidecarCmd(IPFS_BINARY, [
+            "--repo-dir",
+            this.storageRepoPath,
+            "key",
+            "export",
+            siteMetadata.siteId,
+            "--output=" + siteKeyPath
+        ]);
+        console.log(Date.now(), " backup site key finished");
+
+
         // TODO: implement key export function
         // new key is saved in <ipfsrepo>/keystore, just need to copy it out.
         // The key file name is base32 (RFC4648) encoded key name
