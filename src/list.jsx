@@ -127,13 +127,14 @@ export default function List(){
         if(!refreshList)return;
         getMyList();
         dispatch({type:'REFRESH_LIST',payload:null})
-    },[refreshList]);
+    },[refreshList,id]);
 
     useEffect(()=>{
         getMyList();
     },[page])
 
     const getMyList = async () =>{
+        if(!id || id ==='all') return;
         const siteMetadata = await siteApi.getSite(id);
         const AllList = siteMetadata.getPagedMedias(page, pageSize);
 
@@ -166,11 +167,12 @@ export default function List(){
     const handleVideo = (item,index,type) =>{
         console.log(index)
         setCurrent(item);
-        if(index===2 && type==='blist'){
-            setShowAudio(true)
-        }else{
-            setShow(true)
-        }
+        setShow(true)
+        // if(index===2 && type==='blist'){
+        //     setShowAudio(true)
+        // }else{
+        //     setShow(true)
+        // }
     }
 
     const handleClose = () =>{
