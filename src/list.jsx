@@ -9,8 +9,10 @@ import AudioBox from "./components/AudioBox";
 import { useParams } from "react-router-dom";
 import Bg from "./components/bg";
 import DetailImg from "./assets/images/icon_detail.svg";
-
+// import TestSiteMgrPage from "./testSiteMgr";
 import DemoImg from "./assets/images/testFiles/testCover.png";
+import {useInfo} from "./api/contracts";
+import Page from "./components/pagination";
 
 const Box = styled.div`
     padding: 40px;
@@ -85,8 +87,14 @@ const NoItem = styled.div`
   }
 `
 
+const PageBox = styled.div`
+    margin:40px;
+`;
+
 
 export default function List(){
+    const {state,dispatch} = useInfo();
+    const { siteApi,refreshList } = state;
     const[show,setShow] = useState(false);
     const[showAudio,setShowAudio] = useState(false);
     const [showLoading,setLoading] = useState(false);
@@ -99,25 +107,72 @@ export default function List(){
     const [SList,setSList] = useState([]);
     const [current,setCurrent] = useState();
 
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+    const [total, setTotal] = useState(100);
+
     const {id} = useParams();
 
     useEffect(()=>{
-        if(!id || id ==='all'){
+        if(!id || id ==='all' || !siteApi){
             setLoading(false);
             return;
+        }else{
+            console.log(id)
+            getMyList()
         }
 
-    },[id])
+    },[id,siteApi])
+    useEffect(()=>{
+        if(!refreshList)return;
+        getMyList();
+        dispatch({type:'REFRESH_LIST',payload:null})
+    },[refreshList,id]);
+
+    useEffect(()=>{
+        getMyList();
+    },[page])
+
+    const getMyList = async () =>{
+        if(!id || id ==='all') return;
+        const siteMetadata = await siteApi.getSite(id);
+        const AllList = siteMetadata.getPagedMedias(page, pageSize);
+
+        const len = Object.keys(siteMetadata.medias).length;
+        setTotal(len)
+
+        let arr = [];
+
+        for (let key in AllList){
+            arr.push(AllList[key])
+        }
+        if(page === 1) {
+            if(arr.length>3){
+                let rs =  arr.slice(0,3);
+                setBList(rs);
+                let ls = arr.slice(-(arr.length-3));
+                setSList(ls);
+            }else{
+                setBList(arr);
+                setSList([]);
+            }
+        }else{
+            setSList(arr);
+        }
+
+
+    }
 
 
     const handleVideo = (item,index,type) =>{
         console.log(index)
         setCurrent(item);
-        if(index===2 && type==='blist'){
-            setShowAudio(true)
-        }else{
-            setShow(true)
-        }
+        setShow(true)
+        // if(index===2 && type==='blist'){
+        //     setShowAudio(true)
+        // }else{
+        //     setShow(true)
+        // }
     }
 
     const handleClose = () =>{
@@ -132,13 +187,23 @@ export default function List(){
         setShowAudio(false)
     }
 
+
+
+    const handlePage = (num) => {
+        setPage(num + 1);
+    };
+    const handlePageSize = (num) => {
+        setPageSize(num);
+    };
+
     return <Layout>
+        {/*<TestSiteMgrPage />*/}
         {
             showLoading &&<Loading />
         }
 
         {
-            show&&<VideoBox handleClose={handleClose} item={current} />
+            show&&<VideoBox handleClose={handleClose} item={current} id={id} />
         }
         {
             showAudio&&<AudioBox handleClose={handleCloseAudio} item={current}/>
@@ -150,15 +215,15 @@ export default function List(){
             id !== 'all'&&BList.length>=1 &&<Box>
                 <Latest>
                     {
-                        BList.map((item,index)=>( <li key={index} onClick={()=>handleVideo(item,index,'blist')}>
-                            <Item item={item} height={260}/>
+                        !!BList.length && page===1 && BList.map((item,index)=>( <li key={index} onClick={()=>handleVideo(item,index,'blist')}>
+                            <Item item={item} height={260} id={id}/>
                         </li>))
                     }
                 </Latest>
                 <ListBox>
                     {
                         SList.map((item,index)=>( <li key={index} onClick={()=>handleVideo(item,index,'slist')}>
-                            <Item item={item} height={240} />
+                            <Item item={item} height={240} id={id} />
                         </li>))
                     }
                 </ListBox>
@@ -176,6 +241,9 @@ export default function List(){
 
             </Box>
         }
+        <PageBox>
+            <Page blackBg itemsPerPage={pageSize} total={total} current={page - 1} handleToPage={handlePage} handlePageSize={handlePageSize} />
+        </PageBox>
 
     </Layout>
 }

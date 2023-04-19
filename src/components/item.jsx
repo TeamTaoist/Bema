@@ -1,5 +1,6 @@
 import React from "react";
 import styled from "styled-components";
+import PublicJS from "../utils/public";
 
 const Box = styled.div`
   transition: 300ms;
@@ -18,7 +19,7 @@ const Box = styled.div`
   overflow: hidden;
  &:hover {
   transform:scale(1.03);
-  box-shadow: 0px 10px 25px rgba(0,0,0,.08);
+  box-shadow: 0 10px 25px rgba(0,0,0,.08);
  }
  .movie-title{
   width: calc(100% - 40px);
@@ -60,7 +61,7 @@ const Box = styled.div`
   padding:0 20px;
   color: #ffffff;
   font-size: 54px;
-  text-shadow:0px 0px 20px #2b60d8, 0px 5px 20px #4F8AFE;
+  text-shadow:0 0 20px #2b60d8, 0 5px 20px #4F8AFE;
   opacity: .85;
   font-style: normal;
  }
@@ -68,7 +69,7 @@ const Box = styled.div`
  .header-icon:hover {
   background:rgba(0,0,0,.15);
   font-size: 74px;
-  text-shadow:0px 0px 20px #2b60d8, 0px 5px 30px #4F8AFE;
+  text-shadow:0 0 20px #2b60d8, 0 5px 30px #4F8AFE;
   border-top-left-radius: 10px;
   border-top-right-radius:10px;
   opacity: 1;
@@ -122,12 +123,17 @@ const Box = styled.div`
 `
 
 export default function Item(props){
- const { item,height } = props;
+ const { item,height,id } = props;
+ const IPFS_PROXY_SRV_ADDR = "http://127.0.0.1:12345"
+
+ const newCover = (url) =>{
+  return `${IPFS_PROXY_SRV_ADDR}/${id}/${url}`;
+ }
  return<Box height={height} >
   {/*<div className="movie-header" style={{background: `url(${DemoImg})`,backgroundSize:"cover"}}>*/}
   {/*<div className="movie-header" style={{background: `url(${item.cover}) no-repeat top`,backgroundSize:"100% auto"}}>*/}
   <div className="movie-header" >
-   <img src={item.cover} alt=""/>
+   <img src={newCover(item.cover)} alt=""/>
    <div className="header-icon-container">
 
      <i className=" header-icon">▶</i>
@@ -143,7 +149,7 @@ export default function Item(props){
 
     <div className="info-section">
      <label>Date &amp; Time</label>
-     <span>{item.created_at}</span>
+     <span>{PublicJS.dateFormat(item.createdAt)}</span>
     </div>
    </div>
   </div>

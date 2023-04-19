@@ -10,7 +10,8 @@
     "tauri": "tauri",
     "rename": "node rename.js",
     "tauriDev": "tauri dev",
-    "tauriBuild": "tauri build"
+    "tauriBuild": "tauri build --debug",
+    "tauriMacDev": "rm -rf target && tauri dev"
   },
   "dependencies": {
     "@ffmpeg/core": "^0.11.0",
@@ -22,7 +23,7 @@
     "execa": "^6.1.0",
     "ipfs-client": "^0.10.0",
     "ipfs-core": "^0.18.0",
-    "ipfs-http-client": "^60.0.0",
+    "kubo-rpc-client": "^3.0.1",
     "prom-client": "^14.1.1",
     "react": "^18.2.0",
     "react-bootstrap": "^2.7.0",
@@ -30,6 +31,7 @@
     "react-dom": "^18.2.0",
     "react-h5-audio-player": "^3.8.6",
     "react-lettered-avatar": "^1.0.2",
+    "react-paginate": "^8.1.5",
     "react-router-dom": "^6.7.0",
     "sass": "^1.57.1",
     "styled-components": "^5.3.6",

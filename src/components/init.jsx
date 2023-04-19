@@ -1,8 +1,10 @@
 import styled from "styled-components";
 import {useEffect, useState} from "react";
-import {SiteManagerConfig} from "../core/site_mgr/models.ts";
-import {SiteManagerIPFS} from "../core/site_mgr/site_mgr_ipfs.ts";
-
+import {SiteManagerConfig} from "../core/site_mgr/models";
+import {SiteManagerIPFS } from "../core/site_mgr/site_mgr_ipfs";
+import {useInfo} from "../api/contracts";
+import { BaseDirectory, join } from "@tauri-apps/api/path";
+import Loading from "./loading";
 
 const Box = styled.div`
     width: 100vw;
@@ -17,21 +19,27 @@ const Box = styled.div`
   top: 0;
 `
 
-export default function Init(){
-
-    let siteConfig = new SiteManagerConfig();
-    let siteMgr = new SiteManagerIPFS(siteConfig);
+export default function InitPage(){
+    const {state,dispatch} = useInfo();
     const [status,setStatus]= useState(false);
 
     useEffect(()=>{
+        let siteMgr = new SiteManagerIPFS();
         (async () => {
-            await siteMgr.init();
-            setStatus(true)
+            try{
+                await siteMgr.init();
+                console.log(siteMgr)
+                dispatch({type:'SET_SITEMGR',payload:siteMgr})
+                setStatus(true);
+            }catch (e) {
+                console.error(e)
+                setStatus(false);
+            }
+
         })()
+
     },[])
 
-    console.log(status)
-
     if(status) return null;
-    return <Box>Init</Box>
+    return <Loading />
 }

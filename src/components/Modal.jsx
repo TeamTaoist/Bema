@@ -5,6 +5,7 @@ import {useState} from "react";
 import CloseImg from "../assets/images/icon_close.svg";
 import DownImg from "../assets/images/icon_down_arrow.svg";
 import UploadImg from "../assets/images/icon_upload.svg";
+import {useInfo} from "../api/contracts";
 
 // import {useSubstrate} from "../api/contracts";
 
@@ -112,6 +113,8 @@ const TitleBox = styled.div`
 
 export default function Modal(props){
     const {handleClose,handleSuccess} = props;
+    const {state} = useInfo();
+    const { siteApi } = state;
     const [ name,setName] = useState('');
     const [ about,setAbout] = useState('');
     const [ id,setId] = useState('');
@@ -128,10 +131,16 @@ export default function Modal(props){
 
     }
     const handleSubmit = async () =>{
-        handleClose();
-        handleSuccess();
+
         if(type ==='2'){
-            // await NewSite(name).then();
+            try{
+                let siteMetadata = await siteApi.createSite(name, "");
+                handleClose();
+                handleSuccess();
+                console.log(`create site rslt: ${JSON.stringify(siteMetadata)}`);
+            }catch (e){
+                console.error(e)
+            }
 
         }else if(type ==='1'){
             // await SubscribeSite(id);

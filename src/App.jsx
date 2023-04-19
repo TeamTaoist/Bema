@@ -7,8 +7,8 @@ import RouterLink from "./router/router";
 import { HashRouter as Router } from "react-router-dom";
 import GlobalStyle from "./utils/GloablStyle";
 import 'bootstrap/dist/css/bootstrap.min.css';
-
-
+import InitPage from "./components/init";
+import {InfoContextProvider} from "./api/contracts";
 
 
 const profile = new Profile();
@@ -45,39 +45,40 @@ function App() {
 
   return (
     <div>
-
+      <InfoContextProvider>
+      <InitPage />
       <Router>
         <RouterLink />
       </Router>
       <GlobalStyle />
-      
-      {/* <div className="row">
-       <div>
-         <input
-           id="greet-input"
-           onChange={(e) => setName(e.currentTarget.value)}
-           placeholder="Enter a name..."
-         />
-         <button type="button" onClick={() => greet()}>
-           Greet
-         </button>
-         <button type="button" onClick={() => createDB()}>
-           Create DB
-         </button>
-         <button type="button" onClick={() => insert()}>
-           Insert Record
-         </button>
-         <button type="button" onClick={() => query()}>
-           Query Record
-         </button>
-         <button type="button" onClick={() => createDataFolder()}>
-           Create DataFolder
-         </button>
-         <button type="button" onClick={() => createDataFile()}>
-           Create DataFile
-         </button>
-       </div>
-      </div> */}
+      {/*<div className="row">*/}
+      {/*  <div>*/}
+      {/*    <input*/}
+      {/*      id="greet-input"*/}
+      {/*      onChange={(e) => setName(e.currentTarget.value)}*/}
+      {/*      placeholder="Enter a name..."*/}
+      {/*    />*/}
+      {/*    <button type="button" onClick={() => greet()}>*/}
+      {/*      Greet*/}
+      {/*    </button>*/}
+      {/*    <button type="button" onClick={() => createDB()}>*/}
+      {/*      Create DB*/}
+      {/*    </button>*/}
+      {/*    <button type="button" onClick={() => insert()}>*/}
+      {/*      Insert Record*/}
+      {/*    </button>*/}
+      {/*    <button type="button" onClick={() => query()}>*/}
+      {/*      Query Record*/}
+      {/*    </button>*/}
+      {/*    <button type="button" onClick={() => createDataFolder()}>*/}
+      {/*      Create DataFolder*/}
+      {/*    </button>*/}
+      {/*    <button type="button" onClick={() => createDataFile()}>*/}
+      {/*      Create DataFile*/}
+      {/*    </button>*/}
+      {/*  </div>*/}
+      {/*</div>*/}
+      </InfoContextProvider>
     </div>
   );
 }

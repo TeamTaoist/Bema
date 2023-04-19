@@ -13,26 +13,6 @@ fn greet(name: &str) -> String {
 }
 
 fn main() {
-    // `new_sidecar()` expects just the filename, NOT the whole path like in JavaScript
-    let (mut rx, mut child) = Command::new_sidecar("ipfs")
-        .expect("failed to create `ipfs` binary command")
-        .spawn()
-        .expect("Failed to spawn ipfs");
-
-    tauri::async_runtime::spawn(async move {
-        // read events such as stdout
-        while let Some(event) = rx.recv().await {
-            if let CommandEvent::Stdout(_line) = event {
-                // window
-                //     .emit("message", Some(format!("'{}'", _line)))
-                //     .expect("failed to emit event");
-
-                // write to stdin
-                child.write("message from Rust\n".as_bytes()).unwrap();
-            }
-        }
-    });
-
     // App itself
     tauri::Builder::default()
         .setup(|app| {
