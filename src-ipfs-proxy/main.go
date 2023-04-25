@@ -27,9 +27,10 @@ func main() {
 	proxyMiddleware := proxy.Balancer(proxy.Config{
 		// If request header contains
 		Next: func(c *fiber.Ctx) bool {
-			fmt.Printf("req path: %q\n", c.Request().URI().Path())
+			fmt.Printf("IPFSProxy: req path: %q\n", c.Request().URI().Path())
 			return !bytes.HasPrefix(c.Request().URI().Path(), []byte("/api"))
 		},
+		Timeout: 60 * time.Second,
 		Servers: []string{*proxyService},
 		ModifyResponse: func(c *fiber.Ctx) error {
 			c.Response().Header.Set("Access-Control-Allow-Origin", *allowOrigins)
