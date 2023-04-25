@@ -453,13 +453,15 @@ export class SiteManagerIPFS implements SiteManagerInterface {
 
 
     async publishSite(siteId: string) {
+        await this.updateSiteToStorage(siteId);
         const siteHash = this.siteIdDataHashMapping[siteId];
-        if (siteHash !== null) {
+        if (siteHash !== undefined) {
             console.log(`prepare to publish site ${siteId}, hash: ${siteHash}`);
             let publishResult = await this.ipfsClient.name.publish("/ipfs/" + this.siteIdDataHashMapping[siteId], { key: siteId });
             console.log(`site publish result: `, publishResult);
+            return publishResult;
         } else {
-            console.error(`site ${siteId} has no dataHash saved, upload it to IPFS first`);
+            console.error(`upload site ${siteId} failed, please restart application`);
         }
     }
 
