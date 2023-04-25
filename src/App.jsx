@@ -12,7 +12,7 @@ import {InfoContextProvider} from "./api/contracts";
 
 
 const profile = new Profile();
-const db = await Database.load("sqlite:testFiles.db");
+// const db = await Database.load("sqlite:testFiles.db");
 
 function App() {
   const [greetMsg, setGreetMsg] = useState("");

@@ -1,4 +1,4 @@
-import { copyFile, createDir, readDir, removeDir, readTextFile, writeTextFile, BaseDirectory, readBinaryFile } from '@tauri-apps/api/fs'
+import { exists, copyFile, createDir, readDir, removeDir, readTextFile, writeTextFile, BaseDirectory, readBinaryFile } from '@tauri-apps/api/fs'
 
 import { resolve, join, basename, appDataDir } from '@tauri-apps/api/path';
 import { create, IPFSHTTPClient } from 'kubo-rpc-client'
@@ -23,6 +23,8 @@ const IPFS_BINARY = 'binaries/ipfs';
 const IPFS_PROXY_BINARY = 'binaries/ipfs_proxy';
 const FFMPEG_BINARY = 'binaries/ffmpeg';
 const IPFS_PROXY_SRV_ADDR = "http://127.0.0.1:12345"
+const METADATA_FILENAME = "metadata.json"
+const SITE_PUBKEY_FILENAME = "sitekey.pem"
 
 const DefaultSiteConfig: SiteManagerConfig = {
     storageBackend: StorageBackend.IPFS,
@@ -130,7 +132,7 @@ export class SiteManagerIPFS implements SiteManagerInterface {
     async initIpfsClient() {
         for (let i = 0; i < maxConnenctIpfsRetry; i++) {
             console.log(`trying to connect to IPFS, retry time: ${i}`)
-            // TODO: Verify whether the node is available on 5001, and how to change it in cofiguration
+            // TODO: find way to configure port in cofiguration
             const createOptions = {
                 url: IPFS_PROXY_SRV_ADDR + "/api/v0"
             };
@@ -151,7 +153,12 @@ export class SiteManagerIPFS implements SiteManagerInterface {
         for (const entry of entries) {
             const relativePath = entry.path.replace(this.sitesBaseDir, '');
             if (entry.children) {
-                rslt.push(await this.getSite(entry.name));
+                const siteMetadata = await this.getSite(entry.name);
+                if (siteMetadata === undefined)  {
+                    console.error(`Site ${entry.name} load error, continue`)
+                    continue;
+                }
+                rslt.push(siteMetadata);
             } else {
                 // TODO: There should not a single file under sitesBaseDir, think about raise error
             }
@@ -172,6 +179,20 @@ export class SiteManagerIPFS implements SiteManagerInterface {
         // then export the pem to site directory
         let siteKey = await this.ipfsClient.key.gen(siteMetadata.siteId, { type: 'ed25519' });
         console.log(`site key resp: `, siteKey);
+
+        // Backup site key
+        const siteKeyPath = await join(siteDir, SITE_PUBKEY_FILENAME);
+        console.log(Date.now(), " prepare to backup site key to ", siteKeyPath);
+        await execSidecarCmd(IPFS_BINARY, [
+            "--repo-dir",
+            this.storageRepoPath,
+            "key",
+            "export",
+            siteMetadata.siteId,
+            "--output=" + siteKeyPath
+        ]);
+        console.log(Date.now(), " backup site key finished");
+
 
         // TODO: implement key export function
         // new key is saved in <ipfsrepo>/keystore, just need to copy it out.
@@ -210,6 +231,11 @@ export class SiteManagerIPFS implements SiteManagerInterface {
     };
 
     async getSite(siteId: string) {
+        const sitePubKeyFile = await this.getSitePubKeyFilePathViaSiteId(siteId);
+        if (!await exists(sitePubKeyFile, { dir: BaseDirectory.AppData, })) {
+            console.error(`ignore site ${siteId} since no site publish key found`);
+            return
+        }
         const siteMetafilePath = await this.getSiteMetaFilePathViaSiteId(siteId);
         return await loadSiteMetadataFile(siteMetafilePath);
     }
@@ -271,6 +297,7 @@ export class SiteManagerIPFS implements SiteManagerInterface {
         console.log(`media metadata file path: `, mediaMetadataPath);
         await writeTextFile(mediaMetadataPath, JSON.stringify(mediaMetadata))
 
+        // TODO: If no site key found here, the getSite will return undefined, it should be 
         const siteMetadata: SiteMetadata = await this.getSite(reqData.siteId) as SiteMetadata;
         siteMetadata.upinsertMedia(mediaMetadata);
         await siteMetadata.saveToDisk(siteDir, true);
@@ -312,12 +339,17 @@ export class SiteManagerIPFS implements SiteManagerInterface {
 
     async getSiteMetaFilePath(siteMetadata: SiteMetadata): Promise<string> {
         const siteDir = await this.getSiteDir(siteMetadata);
-        return await resolve(await join(siteDir, "metadata.json"));
+        return await resolve(await join(siteDir, METADATA_FILENAME));
     }
 
     async getSiteMetaFilePathViaSiteId(siteId: string): Promise<string> {
         const siteDir = await this.getSiteDirViaSiteId(siteId);
-        return await resolve(await join(siteDir, "metadata.json"));
+        return await resolve(await join(siteDir, METADATA_FILENAME));
+    }
+
+    async getSitePubKeyFilePathViaSiteId(siteId: string): Promise<string> {
+        const siteDir = await this.getSiteDirViaSiteId(siteId);
+        return await resolve(await join(siteDir, SITE_PUBKEY_FILENAME));
     }
 
     ////////////////////////////////////////////////
@@ -421,13 +453,15 @@ export class SiteManagerIPFS implements SiteManagerInterface {
 
 
     async publishSite(siteId: string) {
+        await this.updateSiteToStorage(siteId);
         const siteHash = this.siteIdDataHashMapping[siteId];
-        if (siteHash !== null) {
+        if (siteHash !== undefined) {
             console.log(`prepare to publish site ${siteId}, hash: ${siteHash}`);
             let publishResult = await this.ipfsClient.name.publish("/ipfs/" + this.siteIdDataHashMapping[siteId], { key: siteId });
             console.log(`site publish result: `, publishResult);
+            return publishResult;
         } else {
-            console.error(`site ${siteId} has no dataHash saved, upload it to IPFS first`);
+            console.error(`upload site ${siteId} failed, please restart application`);
         }
     }
 
