@@ -3,37 +3,39 @@ package main
 import (
 	"bytes"
 	"flag"
-	"fmt"
+	"log"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/proxy"
 )
 
-func main() {
-	listenAddr := flag.String("listen-addr", ":12345", "proxy listen address")
-	allowOrigins := flag.String("allow-origin", "http://localhost:1420", "Allow origins, ")
-	proxyService := flag.String("proxy-service", "http://localhost:5001", "Proxy service address")
-	siteBase := flag.String("sites-base", "./", "base directory of sites")
-	flag.Parse()
+type AppConfig struct {
+	ListenAddr   string
+	AllowOrigins string
+	ProxyService string
+	SiteBase     string
+}
 
-	fmt.Printf("site base dir: %s\n", *siteBase)
-
+func NewApplication(appConfig *AppConfig) *fiber.App {
 	app := fiber.New(fiber.Config{
-		BodyLimit: 400 * 1024 * 1024,
+		BodyLimit:             400 * 1024 * 1024,
+		DisableStartupMessage: true,
 	})
+	app.Use(logger.New())
 
 	proxyMiddleware := proxy.Balancer(proxy.Config{
-		// If request header contains
 		Next: func(c *fiber.Ctx) bool {
-			fmt.Printf("IPFSProxy: req path: %q\n", c.Request().URI().Path())
+			log.Printf("IPFSProxy: req path: %q\n", c.Request().URI().Path())
+			log.Printf("Proxy services: %+v\n", appConfig.ProxyService)
 			return !bytes.HasPrefix(c.Request().URI().Path(), []byte("/api"))
 		},
 		Timeout: 60 * time.Second,
-		Servers: []string{*proxyService},
+		Servers: []string{appConfig.ProxyService},
 		ModifyResponse: func(c *fiber.Ctx) error {
-			c.Response().Header.Set("Access-Control-Allow-Origin", *allowOrigins)
+			c.Response().Header.Set("Access-Control-Allow-Origin", appConfig.AllowOrigins)
 			c.Response().Header.Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 			//c.Response().Header.Add("Access-Control-Allow-Headers", "Content-Type, Authorization")
 			return nil
@@ -41,10 +43,10 @@ func main() {
 	})
 
 	corsConfig := cors.Config{
-		AllowOrigins: *allowOrigins,
+		AllowOrigins: appConfig.AllowOrigins,
 	}
 
-	app.Use(cors.New(corsConfig)).Use(proxyMiddleware).Static("/", *siteBase, fiber.Static{
+	app.Use(cors.New(corsConfig)).Use(proxyMiddleware).Static("/", appConfig.SiteBase, fiber.Static{
 		Compress:      true,
 		ByteRange:     true,
 		Browse:        true,
@@ -53,5 +55,20 @@ func main() {
 		MaxAge:        3600,
 	})
 
-	app.Listen(*listenAddr)
+	return app
+}
+
+func main() {
+	appConfig := &AppConfig{}
+
+	flag.StringVar(&appConfig.ListenAddr, "listen-addr", ":12345", "proxy listen address")
+	flag.StringVar(&appConfig.AllowOrigins, "allow-origin", "http://localhost:1420", "Allow origins, ")
+	flag.StringVar(&appConfig.ProxyService, "proxy-service", "http://localhost:5001", "Proxy service address")
+	flag.StringVar(&appConfig.SiteBase, "sites-base", "./", "base directory of sites")
+	flag.Parse()
+
+	log.Printf("site base dir: %s\n", appConfig.SiteBase)
+
+	app := NewApplication(appConfig)
+	app.Listen(appConfig.ListenAddr)
 }
