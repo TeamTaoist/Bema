@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -25,13 +26,16 @@ type ValidatorType int8
 const (
 	CheckBodyEqual ValidatorType = iota
 	CheckFileResp
+	CheckJsonResp
 )
 
 // ValidatorParams saves params used for validator function
 type ValidatorParams struct {
-	ExpectedString string
-	IsRegexp       bool
-	CheckType      ValidatorType
+	ExpectedString  string
+	IsRegexp        bool
+	MustHaveKeys    map[string]bool
+	MustNotHaveKeys map[string]bool
+	CheckType       ValidatorType
 }
 
 func (p *ValidatorParams) StrEqual(strToBeChecked string) bool {
@@ -102,12 +106,23 @@ func setup(t *testing.T) (*fiber.App, *httptest.Server, string, string) {
 	return app, backendService, tmpDir, filePath
 }
 
+func mustReadBody(resp *http.Response) []byte {
+	buf, err := io.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+
+	return buf
+}
+
 func validatorDispatcher(t *testing.T, resp *http.Response, params *ValidatorParams) {
 	switch params.CheckType {
 	case CheckFileResp:
 		checkFileResp(t, resp, params)
 	case CheckBodyEqual:
 		checkBodyEqual(t, resp, params)
+	case CheckJsonResp:
+		checkJsonResp(t, resp, params)
 	default:
 		panic(fmt.Errorf("unknown check type: %d", params.CheckType))
 	}
@@ -115,18 +130,30 @@ func validatorDispatcher(t *testing.T, resp *http.Response, params *ValidatorPar
 
 // TODO: How to verify the response is file content
 func checkFileResp(t *testing.T, resp *http.Response, params *ValidatorParams) {
-	log.Printf("resp header: %+v\n", resp.Header)
 	assert.Equal(t, resp.ContentLength, int64(len(PreDefinedFileContent)))
 	checkBodyEqual(t, resp, params)
 }
 
 func checkBodyEqual(t *testing.T, resp *http.Response, params *ValidatorParams) {
-	buf, err := io.ReadAll(resp.Body)
+	buf := mustReadBody(resp)
+	assert.True(t, params.StrEqual(string(buf)))
+}
+
+func checkJsonResp(t *testing.T, resp *http.Response, params *ValidatorParams) {
+	log.Printf("resp headers: %+v\n", resp.Header)
+	assert.NotNil(t, resp.Header.Get("Content-Type"))
+	assert.Equal(t, resp.Header.Get("Content-Type"), "application/json")
+
+	buf := mustReadBody(resp)
+
+	structBuf := map[string]any{}
+	err := json.Unmarshal(buf, &structBuf)
 	if err != nil {
 		panic(err)
 	}
-
-	assert.True(t, params.StrEqual(string(buf)))
+	for keyName, _ := range params.MustHaveKeys {
+		assert.Contains(t, structBuf, keyName)
+	}
 }
 
 func TestProxyService(t *testing.T) {
@@ -137,27 +164,38 @@ func TestProxyService(t *testing.T) {
 	fileName := filepath.Base(tmpFilePath)
 
 	var tests = []struct {
-		name   string
-		path   string
-		params *ValidatorParams
+		name       string
+		path       string
+		httpMethod string
+		params     *ValidatorParams
 	}{
-		{"ShouldFwdReqWithApiPrefixToBackend",
+		{
+			"ShouldFwdReqWithApiPrefixToBackend",
 			"/api/foobar",
+			"GET",
 			&ValidatorParams{ExpectedString: BackendServiceRespBody, IsRegexp: false, CheckType: CheckBodyEqual},
-		},
-		{"ShouldProcessReqWithoutApiPrefixSelf",
+		}, {
+			"ShouldProcessReqWithoutApiPrefixSelf",
 			fmt.Sprintf("/%s", fileName),
-			&ValidatorParams{ExpectedString: PreDefinedFileContent, IsRegexp: false, CheckType: CheckFileResp}},
+			"GET",
+			&ValidatorParams{ExpectedString: PreDefinedFileContent, IsRegexp: false, CheckType: CheckFileResp},
+		}, {
+			"ShouldReturnPublishTaskIdWhenInvokingIpfsPublishAPI",
+			"/api/v0/name/publish?key=pubkey&arg=ipfs_path",
+			"POST",
+			&ValidatorParams{MustHaveKeys: map[string]bool{"id": true}, CheckType: CheckJsonResp},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest("GET", tt.path, nil)
+			req := httptest.NewRequest(tt.httpMethod, tt.path, nil)
 			resp, _ := app.Test(req)
 
 			assert.Equal(t, resp.StatusCode, fiber.StatusOK)
 			assert.Contains(t, resp.Header, "Access-Control-Allow-Origin")
 			assert.Equal(t, resp.Header.Get("Access-Control-Allow-Origin"), "*")
+
 			validatorDispatcher(t, resp, tt.params)
 		})
 	}

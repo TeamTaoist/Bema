@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"flag"
+	"fmt"
 	"log"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/proxy"
+	"github.com/google/uuid"
 )
 
 type AppConfig struct {
@@ -17,6 +19,14 @@ type AppConfig struct {
 	AllowOrigins string
 	ProxyService string
 	SiteBase     string
+}
+
+type PublishResult struct {
+	Id string `json:"id"`
+}
+
+type PublishTask struct {
+	Id string
 }
 
 func NewApplication(appConfig *AppConfig) *fiber.App {
@@ -28,9 +38,19 @@ func NewApplication(appConfig *AppConfig) *fiber.App {
 
 	proxyMiddleware := proxy.Balancer(proxy.Config{
 		Next: func(c *fiber.Ctx) bool {
-			log.Printf("IPFSProxy: req path: %q\n", c.Request().URI().Path())
-			log.Printf("Proxy services: %+v\n", appConfig.ProxyService)
-			return !bytes.HasPrefix(c.Request().URI().Path(), []byte("/api"))
+			reqPathBytes := c.Request().URI().Path()
+
+			if bytes.HasPrefix(reqPathBytes, []byte("/api")) {
+				// This is kubo RPC API request, need to split publish request out for special processing
+				if bytes.HasPrefix(reqPathBytes, []byte("/api/v0/name/publish")) {
+					return true
+				} else {
+					return false
+				}
+			} else {
+				// This is static file requests, pass through to next handler
+				return true
+			}
 		},
 		Timeout: 60 * time.Second,
 		Servers: []string{appConfig.ProxyService},
@@ -46,14 +66,25 @@ func NewApplication(appConfig *AppConfig) *fiber.App {
 		AllowOrigins: appConfig.AllowOrigins,
 	}
 
-	app.Use(cors.New(corsConfig)).Use(proxyMiddleware).Static("/", appConfig.SiteBase, fiber.Static{
-		Compress:      true,
-		ByteRange:     true,
-		Browse:        true,
-		Index:         "john.html",
-		CacheDuration: 10 * time.Second,
-		MaxAge:        3600,
-	})
+	app.Use(cors.New(corsConfig)).Use(proxyMiddleware).
+		Post("/api/v0/name/publish", func(ctx *fiber.Ctx) error {
+			// IPFS publish request, the proxy will push this request to a worker queue and return an uniq publish ID
+			// Client can query whether the publishing task has been finished with the ID returned in this request
+			pubTaskId := uuid.NewString()
+			pubResp := PublishResult{Id: pubTaskId}
+			return ctx.JSON(pubResp)
+		}).
+		Get("/pubtask/:id", func(ctx *fiber.Ctx) error {
+			return ctx.SendString(fmt.Sprintf("This is publish handler, got querying for id: %s", ctx.Params("id")))
+		}).
+		Static("/", appConfig.SiteBase, fiber.Static{
+			Compress:      true,
+			ByteRange:     true,
+			Browse:        true,
+			Index:         "john.html",
+			CacheDuration: 10 * time.Second,
+			MaxAge:        3600,
+		})
 
 	return app
 }
