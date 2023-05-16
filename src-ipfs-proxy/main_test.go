@@ -9,6 +9,8 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
@@ -17,6 +19,28 @@ import (
 
 const BackendServiceRespBody = "backend service"
 const PreDefinedFileContent = "this is a temporary file"
+
+type ValidatorType int8
+
+const (
+	CheckBodyEqual ValidatorType = iota
+	CheckFileResp
+)
+
+// ValidatorParams saves params used for validator function
+type ValidatorParams struct {
+	ExpectedString string
+	IsRegexp       bool
+	CheckType      ValidatorType
+}
+
+func (p *ValidatorParams) StrEqual(strToBeChecked string) bool {
+	if p.IsRegexp {
+		return regexp.MustCompile(p.ExpectedString).MatchString(strToBeChecked)
+	} else {
+		return strings.Compare(p.ExpectedString, strToBeChecked) == 0
+	}
+}
 
 // Generate random port from 1025 ~ 65535
 func randomListenAddr() string {
@@ -78,6 +102,33 @@ func setup(t *testing.T) (*fiber.App, *httptest.Server, string, string) {
 	return app, backendService, tmpDir, filePath
 }
 
+func validatorDispatcher(t *testing.T, resp *http.Response, params *ValidatorParams) {
+	switch params.CheckType {
+	case CheckFileResp:
+		checkFileResp(t, resp, params)
+	case CheckBodyEqual:
+		checkBodyEqual(t, resp, params)
+	default:
+		panic(fmt.Errorf("unknown check type: %d", params.CheckType))
+	}
+}
+
+// TODO: How to verify the response is file content
+func checkFileResp(t *testing.T, resp *http.Response, params *ValidatorParams) {
+	log.Printf("resp header: %+v\n", resp.Header)
+	assert.Equal(t, resp.ContentLength, int64(len(PreDefinedFileContent)))
+	checkBodyEqual(t, resp, params)
+}
+
+func checkBodyEqual(t *testing.T, resp *http.Response, params *ValidatorParams) {
+	buf, err := io.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+
+	assert.True(t, params.StrEqual(string(buf)))
+}
+
 func TestProxyService(t *testing.T) {
 	app, backendService, tmpDir, tmpFilePath := setup(t)
 	defer os.RemoveAll(tmpDir)
@@ -86,31 +137,28 @@ func TestProxyService(t *testing.T) {
 	fileName := filepath.Base(tmpFilePath)
 
 	var tests = []struct {
-		name       string
-		path       string
-		returnBody []byte
+		name   string
+		path   string
+		params *ValidatorParams
 	}{
-		{"ShouldFwdReqWithApiPrefixToBackend", "/api/foobar", []byte(BackendServiceRespBody)},
-		{"ShouldProcessReqWithoutApiPrefixSelf", fmt.Sprintf("/%s", fileName), []byte(PreDefinedFileContent)},
+		{"ShouldFwdReqWithApiPrefixToBackend",
+			"/api/foobar",
+			&ValidatorParams{ExpectedString: BackendServiceRespBody, IsRegexp: false, CheckType: CheckBodyEqual},
+		},
+		{"ShouldProcessReqWithoutApiPrefixSelf",
+			fmt.Sprintf("/%s", fileName),
+			&ValidatorParams{ExpectedString: PreDefinedFileContent, IsRegexp: false, CheckType: CheckFileResp}},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			log.Printf("Case: %#v\n", tt)
 			req := httptest.NewRequest("GET", tt.path, nil)
 			resp, _ := app.Test(req)
 
 			assert.Equal(t, resp.StatusCode, fiber.StatusOK)
-
-			buf, err := io.ReadAll(resp.Body)
-			if err != nil {
-				panic(err)
-			}
-
-			assert.Equal(t, buf, tt.returnBody)
+			assert.Contains(t, resp.Header, "Access-Control-Allow-Origin")
+			assert.Equal(t, resp.Header.Get("Access-Control-Allow-Origin"), "*")
+			validatorDispatcher(t, resp, tt.params)
 		})
 	}
-
-	//buf := make([]byte, 4096)
-	//readCnt, _ := resp.Body.Read(buf)
 }
