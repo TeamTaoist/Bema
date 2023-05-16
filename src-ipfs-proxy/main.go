@@ -25,10 +25,6 @@ type PublishResult struct {
 	Id string `json:"id"`
 }
 
-type PublishTask struct {
-	Id string
-}
-
 func NewApplication(appConfig *AppConfig) *fiber.App {
 	app := fiber.New(fiber.Config{
 		BodyLimit:             400 * 1024 * 1024,
@@ -72,6 +68,8 @@ func NewApplication(appConfig *AppConfig) *fiber.App {
 			// Client can query whether the publishing task has been finished with the ID returned in this request
 			pubTaskId := uuid.NewString()
 			pubResp := PublishResult{Id: pubTaskId}
+
+			// TODO: Add this publish task ID into queue, and
 			return ctx.JSON(pubResp)
 		}).
 		Get("/pubtask/:id", func(ctx *fiber.Ctx) error {

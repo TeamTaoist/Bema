@@ -11,7 +11,8 @@ type PublishTask struct {
 }
 
 type PublisherWorker struct {
-	MsgCh *chan *PublishTask
+	IpfsRpcAddr string
+	MsgCh       *chan *PublishTask
 
 	CheckInterval     time.Duration
 	TaskExpiredSecond int
@@ -21,8 +22,9 @@ type PublisherWorker struct {
 
 }
 
-func NewPublisherWorker() *PublisherWorker {
+func NewPublisherWorker(ipfsRpcApiAddr string) *PublisherWorker {
 	return &PublisherWorker{
+		IpfsRpcAddr:       ipfsRpcApiAddr,
 		CheckInterval:     2 * time.Second,
 		TaskExpiredSecond: 60 * 60, // Task will be expired after 60 minutes
 	}
