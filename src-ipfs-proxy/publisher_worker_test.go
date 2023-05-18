@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -13,6 +15,14 @@ import (
 func PublisherWorkerSetup() *PublisherWorker {
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Received request with path: %s\n", r.URL)
+		reqPath := r.URL.Path
+		if strings.EqualFold(reqPath, "/api/v0/name/publish") {
+			respData := map[string]string{
+				"Name": "foobar",
+			}
+			respBytes, _ := json.Marshal(respData)
+			w.Write(respBytes)
+		}
 	}))
 
 	worker := NewPublisherWorker(testServer.URL)
@@ -27,13 +37,9 @@ func TestPublisherWorker_AddTaskAndWaitForProcessing(t *testing.T) {
 	assert.Equal(t, len(worker.taskPool), 0)
 	taskId := worker.AddTask("testKey", "testPath")
 	assert.Equal(t, len(worker.taskPool), 1)
-	assert.False(t, worker.IsTaskPublished(taskId))
+	assert.Equal(t, worker.TaskIpnsPath(taskId), "")
 	time.Sleep(2 * time.Second)
-	assert.True(t, worker.IsTaskPublished(taskId))
-}
 
-//func TestPublisherWorker_TaskProcessed(t *testing.T) {
-//	worker := PublisherWorkerSetup()
-//	taskId := worker.AddTask("testKey", "testPath")
-//	log.Printf("Task id: %s\n", taskId)
-//}
+	// Note: this response is mocked by test server, and only struct is correct
+	assert.Equal(t, worker.TaskIpnsPath(taskId), "/ipns/foobar")
+}
