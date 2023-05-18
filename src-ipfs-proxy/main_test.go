@@ -151,7 +151,7 @@ func checkJsonResp(t *testing.T, resp *http.Response, params *ValidatorParams) {
 	if err != nil {
 		panic(err)
 	}
-	for keyName, _ := range params.MustHaveKeys {
+	for keyName := range params.MustHaveKeys {
 		assert.Contains(t, structBuf, keyName)
 	}
 }
