@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"flag"
-	"fmt"
 	"log"
 	"time"
 
@@ -11,13 +10,12 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/proxy"
-	"github.com/google/uuid"
 )
 
 type AppConfig struct {
 	ListenAddr   string
 	AllowOrigins string
-	ProxyService string
+	IpfsService  string
 	SiteBase     string
 }
 
@@ -26,6 +24,9 @@ type PublishResult struct {
 }
 
 func NewApplication(appConfig *AppConfig) *fiber.App {
+	publisherWorker := NewPublisherWorker(appConfig.IpfsService)
+	go publisherWorker.Start()
+
 	app := fiber.New(fiber.Config{
 		BodyLimit:             400 * 1024 * 1024,
 		DisableStartupMessage: true,
@@ -49,7 +50,7 @@ func NewApplication(appConfig *AppConfig) *fiber.App {
 			}
 		},
 		Timeout: 60 * time.Second,
-		Servers: []string{appConfig.ProxyService},
+		Servers: []string{appConfig.IpfsService},
 		ModifyResponse: func(c *fiber.Ctx) error {
 			c.Response().Header.Set("Access-Control-Allow-Origin", appConfig.AllowOrigins)
 			c.Response().Header.Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
@@ -66,14 +67,19 @@ func NewApplication(appConfig *AppConfig) *fiber.App {
 		Post("/api/v0/name/publish", func(ctx *fiber.Ctx) error {
 			// IPFS publish request, the proxy will push this request to a worker queue and return an uniq publish ID
 			// Client can query whether the publishing task has been finished with the ID returned in this request
-			pubTaskId := uuid.NewString()
+			pubKey := ctx.Query("key")
+			ipfsPath := ctx.Query("arg")
+			log.Printf("pubkey: %s, ipfsPath: %s\n", pubKey, ipfsPath)
+			pubTaskId := publisherWorker.AddTask(pubKey, ipfsPath)
 			pubResp := PublishResult{Id: pubTaskId}
-
-			// TODO: Add this publish task ID into queue, and
 			return ctx.JSON(pubResp)
 		}).
 		Get("/pubtask/:id", func(ctx *fiber.Ctx) error {
-			return ctx.SendString(fmt.Sprintf("This is publish handler, got querying for id: %s", ctx.Params("id")))
+			taskId := ctx.Params("id")
+			respData := map[string]string{
+				"ipns_path": publisherWorker.TaskIpnsPath(taskId),
+			}
+			return ctx.JSON(respData)
 		}).
 		Static("/", appConfig.SiteBase, fiber.Static{
 			Compress:      true,
@@ -92,7 +98,7 @@ func main() {
 
 	flag.StringVar(&appConfig.ListenAddr, "listen-addr", ":12345", "proxy listen address")
 	flag.StringVar(&appConfig.AllowOrigins, "allow-origin", "http://localhost:1420", "Allow origins, ")
-	flag.StringVar(&appConfig.ProxyService, "proxy-service", "http://localhost:5001", "Proxy service address")
+	flag.StringVar(&appConfig.IpfsService, "ipfs-service", "http://localhost:5001", "IPFS RPC service address")
 	flag.StringVar(&appConfig.SiteBase, "sites-base", "./", "base directory of sites")
 	flag.Parse()
 

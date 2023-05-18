@@ -97,7 +97,7 @@ func setup(t *testing.T) (*fiber.App, *httptest.Server, string, string) {
 	appConfig := &AppConfig{
 		ListenAddr:   listenAddr,
 		AllowOrigins: "*",
-		ProxyService: backendService.URL,
+		IpfsService:  backendService.URL,
 		SiteBase:     tmpDir,
 	}
 
