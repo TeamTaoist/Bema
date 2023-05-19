@@ -465,6 +465,12 @@ export class SiteManagerIPFS implements SiteManagerInterface {
         }
     }
 
+    async getPublishTaskStatus(pubTaskId: string) {
+        const queryURL = `${IPFS_PROXY_SRV_ADDR}/pubtask/${pubTaskId}`;
+        console.log("getPublishStatus, url: ", queryURL)
+        // TODO: Send request and get response
+    }
+
     getMediaCover(siteId: string, mediaMetadata: SiteMediaMetadata): string {
         return `${IPFS_PROXY_SRV_ADDR}/${siteId}/${mediaMetadata.cover}`;
     }
