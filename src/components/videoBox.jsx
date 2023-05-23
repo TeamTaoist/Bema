@@ -35,6 +35,10 @@ const VideoBoxBg = styled.div`
     width: 100%;
     max-height: 50vh;
   }
+
+  .video-js .vjs-tech {
+    height: 50vh!important;
+  }
 `
 const TipBox = styled.div`
   width: 100%;
@@ -98,7 +102,7 @@ const VideoPlugin = (props) => {
 
     return (
         <VideoBoxBg data-vjs-player>
-            <video ref={videoNode} className="video-js" id="video" />
+            <video ref={videoNode} className="video-js vjs-default-skin vjs-big-play-centered vjs-16-9" id="video" />
         </VideoBoxBg>
     );
 };
