@@ -28,7 +28,6 @@ export default function InitPage(){
         (async () => {
             try{
                 await siteMgr.init();
-                console.log(siteMgr)
                 dispatch({type:'SET_SITEMGR',payload:siteMgr})
                 setStatus(true);
             }catch (e) {

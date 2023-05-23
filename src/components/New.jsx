@@ -8,6 +8,7 @@ import AddImg from "../assets/images/icon_add.svg";
 import { useInfo } from "../api/contracts";
 import { writeBinaryFile, createDir, BaseDirectory, readBinaryFile } from "@tauri-apps/api/fs";
 import { appDataDir, join } from "@tauri-apps/api/path";
+import BtnLoading from "./btnLoading.jsx";
 
 
 const Box = styled.div`
@@ -97,6 +98,9 @@ const Group = styled.div`
   margin-top: 20px;
   button{
     width: 100%;
+    display: flex;
+    align-content: center;
+    justify-content: center;
   }
 `
 
@@ -156,6 +160,8 @@ export default function New(props) {
     const { handleClose, item,handleNewTips } = props;
     const { state,dispatch } = useInfo();
     const { siteApi } = state;
+
+    const IPFS_PROXY_SRV_ADDR = "http://127.0.0.1:12345"
     // const {state} = useSubstrate();
     // const {info} = state;
     const [title, setTitle] = useState('');
@@ -164,6 +170,7 @@ export default function New(props) {
     const [imgUrl, setImgUrl] = useState('');
     const [url64, setUrl64] = useState('');
     const [file, setFile] = useState();
+    const [loading, setLoading] = useState(false);
 
     const handleInput = (e) => {
         const { value, name } = e.target;
@@ -175,6 +182,10 @@ export default function New(props) {
 
     }
     const handleSubmit = async () => {
+
+        if(!item.siteId ||!imgUrl || !title || !file) return;
+
+        setLoading(true);
         const mediaPath = await copyFileToAppDir(file);
         const mediaMetadata = await siteApi.uploadMedia({
             siteId: item.siteId,
@@ -182,11 +193,41 @@ export default function New(props) {
             title,
             description: about,
             tmpMediaPath: mediaPath
-        })
-        handleClose();
-        handleNewTips("Added !");
-        dispatch({type:'REFRESH_LIST',payload:true})
+        });
         console.log(mediaMetadata)
+
+        const publishObj = await siteApi.publishSite(item.siteId)
+        console.log(publishObj,item.siteId);
+
+
+        const {id} = publishObj;
+
+
+        console.log(`${IPFS_PROXY_SRV_ADDR}/pubtask/${id}`)
+
+
+        function call() {
+            setTimeout(async()=> {
+                let rt = await getStatus(id);
+                console.error(rt)
+                if (!rt) {
+                    call()
+                }else{
+                    setLoading(false);
+                    handleClose();
+                    handleNewTips("Added !");
+                    dispatch({type:'REFRESH_LIST',payload:true})
+                }
+            }, 2000)
+        }
+        call()
+
+
+
+
+
+
+
         // if(!info)return;
         // const infoP = JSON.parse(info)
         // const{ wallet:{address}} =infoP;
@@ -203,6 +244,14 @@ export default function New(props) {
         // const res = await Upload(formData);
         // console.log(res)
 
+    }
+
+    const getStatus = async(id) =>{
+        const url = `${IPFS_PROXY_SRV_ADDR}/pubtask/${id}`;
+        const response = await fetch(url);
+        const result = await response.json();
+        const { ipns_path } = result;
+        return ipns_path;
     }
 
 
@@ -286,9 +335,14 @@ export default function New(props) {
     return <Box>
         <MidBox>
             <div>
-                <TitleBox>New Media <CloseBox onClick={() => handleClose()}>
-                    <img src={CloseImg} alt="" />
-                </CloseBox></TitleBox>
+                <TitleBox>New Media
+                    {
+                         !loading &&<CloseBox onClick={() => handleClose()}>
+                            <img src={CloseImg} alt="" />
+                        </CloseBox>
+                    }
+
+                </TitleBox>
                 <FirstLine>
                     <InputBoxImg>
                         {
@@ -351,7 +405,15 @@ export default function New(props) {
             </div>
 
             <Group>
-                <Button variant="flat" onClick={() => handleSubmit()} >Submit</Button>
+                <Button variant="flat" onClick={() => handleSubmit()} >
+                    {
+                        !loading && <>submit</>
+                    }
+                    {
+                        loading && <>upload  <BtnLoading /></>
+                    }
+
+                </Button>
             </Group>
         </MidBox>
     </Box>

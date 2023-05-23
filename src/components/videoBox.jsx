@@ -29,9 +29,11 @@ const ContentBox = styled.div`
 `
 
 const VideoBoxBg = styled.div`
+
   video{
     background: #000;
     width: 100%;
+    max-height: 50vh;
   }
 `
 const TipBox = styled.div`
