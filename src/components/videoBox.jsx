@@ -98,7 +98,7 @@ const VideoPlugin = (props) => {
 
     return (
         <VideoBoxBg data-vjs-player>
-            <video ref={videoNode} className="video-js" id="video" />
+            <video ref={videoNode} className="video-js vjs-default-skin vjs-big-play-centered vjs-16-9" id="video" />
         </VideoBoxBg>
     );
 };

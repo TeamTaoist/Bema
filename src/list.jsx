@@ -108,7 +108,7 @@ export default function List(){
     const [current,setCurrent] = useState();
 
     const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
+    const [pageSize, setPageSize] = useState(11);
     const [total, setTotal] = useState(100);
 
     const {id} = useParams();

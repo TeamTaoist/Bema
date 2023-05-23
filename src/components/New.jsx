@@ -161,7 +161,7 @@ export default function New(props) {
     const { state,dispatch } = useInfo();
     const { siteApi } = state;
 
-    const IPFS_PROXY_SRV_ADDR = "http://127.0.0.1:12345"
+
     // const {state} = useSubstrate();
     // const {info} = state;
     const [title, setTitle] = useState('');
@@ -201,26 +201,18 @@ export default function New(props) {
 
 
         const {id} = publishObj;
+        dispatch({type:'SET_STATUS',payload:{
+                publishId:id,
+                siteId:item.siteId
+        }})
 
 
-        console.log(`${IPFS_PROXY_SRV_ADDR}/pubtask/${id}`)
 
 
-        function call() {
-            setTimeout(async()=> {
-                let rt = await getStatus(id);
-                console.error(rt)
-                if (!rt) {
-                    call()
-                }else{
-                    setLoading(false);
-                    handleClose();
-                    handleNewTips("Added !");
-                    dispatch({type:'REFRESH_LIST',payload:true})
-                }
-            }, 2000)
-        }
-        call()
+        setLoading(false);
+        handleClose();
+        handleNewTips("Added !");
+        dispatch({type:'REFRESH_LIST',payload:true})
 
 
 
@@ -246,13 +238,7 @@ export default function New(props) {
 
     }
 
-    const getStatus = async(id) =>{
-        const url = `${IPFS_PROXY_SRV_ADDR}/pubtask/${id}`;
-        const response = await fetch(url);
-        const result = await response.json();
-        const { ipns_path } = result;
-        return ipns_path;
-    }
+
 
 
     // const getBase64 = (imgUrl) => {

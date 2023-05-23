@@ -19,6 +19,7 @@ import CloseImg from "../assets/images/remove.svg";
 import {useInfo} from "../api/contracts";
 import Reminder from "./reminder";
 import Toast from "./Toast";
+import PublishLoading from "./publishLoading.jsx";
 
 
 const Box = styled.div`
@@ -27,8 +28,11 @@ const Box = styled.div`
   .folder-item__details__name{
     color: #c0392b;
   }
- 
 }
+  .rhtTop{
+    display: flex;
+    align-items: center;
+  }
 `
 
 const CopiedBox = styled.div`
@@ -38,8 +42,8 @@ const CopiedBox = styled.div`
 `
 
 export default function RhtBox(props){
-    const {state} = useInfo();
-    const { siteApi } = state;
+    const {state,dispatch} = useInfo();
+    const { siteApi,publishStatus } = state;
     const {id,item,refresh} = props;
     const [show, setShow] = useState(false);
     const [showEdit,setShowEdit] = useState(false);
@@ -51,6 +55,9 @@ export default function RhtBox(props){
     const navigate = useNavigate();
     const [current,setCurrent] = useState();
     const [delItem,setDelItem] = useState();
+    const [showLoading,setShowLoading] = useState(false);
+
+    const IPFS_PROXY_SRV_ADDR = "http://127.0.0.1:12345"
 
     const arrayWithColors = [
         "#16a085",
@@ -62,6 +69,39 @@ export default function RhtBox(props){
         '#3498db',
         '#8e44ad',
     ];
+
+    useEffect(()=>{
+
+        if(!publishStatus)  return;
+        const {publishId,siteId} = publishStatus;
+        call(publishId,siteId);
+
+    },[publishStatus])
+
+    const call = (publishId,siteId) => {
+        // setShowLoading(true);
+        setTimeout(async()=> {
+            if(!publishStatus)  return;
+            let rt = await getStatus(publishId);
+            if (!rt) {
+                if(siteId === item.siteId){
+                    setShowLoading(true);
+                }
+                call(publishId,siteId)
+            }else{
+                setShowLoading(false);
+                dispatch({type:'SET_STATUS',payload:null})
+            }
+        }, 2000)
+    }
+
+    const getStatus = async(id) =>{
+        const url = `${IPFS_PROXY_SRV_ADDR}/pubtask/${id}`;
+        const response = await fetch(url);
+        const result = await response.json();
+        const { ipns_path } = result;
+        return ipns_path;
+    }
 
     useEffect(()=>{
         const toggleFolder = document.getElementById(id);
@@ -223,7 +263,13 @@ export default function RhtBox(props){
                             {item.name}
                         </div>
                     </div>
-                    <div className="folder-summary__end">
+
+                    <div className="folder-summary__end rhtTop">
+                        {
+                            showLoading && <PublishLoading/>
+                        }
+
+
                         <img src={MoreImg} alt=""/>
                     </div>
                 </div>
