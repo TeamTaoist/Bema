@@ -35,10 +35,6 @@ const VideoBoxBg = styled.div`
     width: 100%;
     max-height: 50vh;
   }
-
-  .video-js .vjs-tech {
-    height: 50vh!important;
-  }
 `
 const TipBox = styled.div`
   width: 100%;
