@@ -74,7 +74,6 @@ export default function RhtBox(props){
 
         if(!publishStatus)  return;
         const {publishId,siteId} = publishStatus;
-        console.log(publishId,siteId)
         call(publishId,siteId);
 
     },[publishStatus])
@@ -84,7 +83,6 @@ export default function RhtBox(props){
         setTimeout(async()=> {
             if(!publishStatus)  return;
             let rt = await getStatus(publishId);
-            console.error(rt,publishId)
             if (!rt) {
                 if(siteId === item.siteId){
                     setShowLoading(true);
