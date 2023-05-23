@@ -4,16 +4,8 @@ const reducer = (state, action) => {
             return { ...state, siteApi: action.payload };
         case 'REFRESH_LIST':
             return { ...state, refreshList: action.payload };
-
-        // //accounts
-        // case 'LOAD_ALLACCOUNTS':
-        //     return { ...state, allaccountsState: 'LOAD_ALLACCOUNTS' };
-        //
-        // case 'SET_ALLACCOUNTS':
-        //     return { ...state, allAccounts: action.payload, allaccountsState: 'READY' };
-        //
-        // case 'ALLACCOUNTS_ERROR':
-        //     return { ...state, allAccounts: null, allaccountsState: 'ERROR' };
+        case 'SET_STATUS':
+            return { ...state, publishStatus: action.payload };
 
         default:
             throw new Error(`Unknown type: ${action.type}`);
